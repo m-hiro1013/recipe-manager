@@ -1,0 +1,747 @@
+# =====================================
+# 💾 開発ワークフロー・進捗管理
+# =====================================
+# WORKFLOW.yaml
+# 【このファイルの役割】
+# - プロジェクトの進捗・決定事項・ファイル構成を管理
+# - セーブデータとして渡すことで、前回の続きから再開可能
+# - ⚠️ ここに書かれていないことはプロジェクトから消える
+#
+# =====================================
+
+workflow:
+  version: "1.0"
+  last_updated: "2025-01-23"
+  last_session_summary: "CSVインポート機能、仕入れ商品一覧画面、使用商品フラグ機能、業者一括ON/OFF、業者非表示機能を実装完了。SYSTEM_PROMPT.yamlとWORKFLOW.yamlへのドキュメント分離を実施。"
+
+
+# =====================================
+# 1. プロジェクト基本情報
+# =====================================
+project:
+  name: "レシピ管理・原価計算システム"
+  description: "飲食店のレシピ管理と原価計算を効率化するWebアプリ"
+  repository_url: "https://github.com/m-hiro1013/recipe-manager.git"
+  production_url: "https://recipe-manager-blue-one.vercel.app/"
+  created_at: "2025-01-20"
+  
+  user:
+    name: "ひろきくん"
+  
+  tech_stack:
+    backend: "Supabase"
+    frontend: "HTML / CSS / JavaScript"
+    css_framework: "TailwindCSS"
+    build_tool: "Vite"
+    deploy: "Vercel"
+    other: []
+
+
+# =====================================
+# 2. 要件定義（全体像）
+# =====================================
+requirements:
+  
+  goal:
+    primary: "飲食店のレシピ管理と原価計算を効率化"
+    target_user: "飲食店の管理者・シェフ・スタッフ"
+    success_criteria:
+      - "仕入れ商品をCSVからインポートできる"
+      - "アイテム（部品化した商品）を登録できる"
+      - "仕込み品を登録できる"
+      - "商品（最終メニュー）を登録できる"
+      - "原価が自動計算される"
+  
+  features:
+    - id: "F001"
+      name: "CSVインポート機能"
+      description: "インフォマートからのCSV取り込み"
+      priority: "must"
+      status: "done"
+      completed_at: "2025-01-23"
+      notes: "Shift-JIS対応、重複は更新日で新しい方を採用"
+    
+    - id: "F002"
+      name: "仕入れ商品一覧画面"
+      description: "取引先ごとにグループ化表示"
+      priority: "must"
+      status: "done"
+      completed_at: "2025-01-23"
+      notes: "五十音順、検索機能、ページネーション"
+    
+    - id: "F003"
+      name: "使用商品フラグ機能"
+      description: "仕入れ商品から使うものにフラグを立てる"
+      priority: "must"
+      status: "done"
+      completed_at: "2025-01-23"
+      notes: "表示切り替え（OFFだけ/ONだけ/全部）、デフォルトはOFFだけ"
+    
+    - id: "F004"
+      name: "業者単位の一括ON/OFF"
+      description: "業者の全商品を一括で使用ON/OFFできる"
+      priority: "should"
+      status: "done"
+      completed_at: "2025-01-23"
+      notes: ""
+    
+    - id: "F005"
+      name: "業者の非表示機能"
+      description: "使わない業者を非表示にできる"
+      priority: "should"
+      status: "done"
+      completed_at: "2025-01-23"
+      notes: "非表示リストモーダルで確認・復活可能、商品0件の業者も表示"
+    
+    - id: "F006"
+      name: "アイテム登録機能"
+      description: "使用フラグONの仕入れ商品を部品化"
+      priority: "must"
+      status: "planned"
+      completed_at: ""
+      notes: "アイテム名、使用単位、取れる数、単位原価の自動計算"
+    
+    - id: "F007"
+      name: "仕込み品登録機能"
+      description: "アイテムや他の仕込み品を組み合わせて登録"
+      priority: "must"
+      status: "planned"
+      completed_at: ""
+      notes: ""
+    
+    - id: "F008"
+      name: "商品登録機能"
+      description: "最終メニューの登録（仕上がり常に1単位）"
+      priority: "must"
+      status: "planned"
+      completed_at: ""
+      notes: ""
+    
+    - id: "F009"
+      name: "原価自動計算"
+      description: "材料の原価を自動計算"
+      priority: "must"
+      status: "planned"
+      completed_at: ""
+      notes: ""
+  
+  screens:
+    - id: "S001"
+      name: "メイン画面（仕入れ商品一覧）"
+      path: "/"
+      features: ["F001", "F002", "F003", "F004", "F005"]
+      status: "done"
+
+
+# =====================================
+# 3. アイデア・決定事項の記録
+# =====================================
+decisions:
+  
+  adopted:
+    - id: "D001"
+      category: "データ保存"
+      idea: "localStorageは使わない、全てSupabaseに保存"
+      reason: "フェーズ2で複数ユーザー対応するため"
+      decided_at: "2025-01-23"
+      related_feature: ""
+    
+    - id: "D002"
+      category: "CSVインポート"
+      idea: "更新日が新しい方を採用する（重複対策）"
+      reason: "CSVに同じ商品コードが複数存在するため"
+      decided_at: "2025-01-23"
+      related_feature: "F001"
+    
+    - id: "D003"
+      category: "UI"
+      idea: "デフォルトは「OFFだけ」表示"
+      reason: "追加したいものだけ入れるのがスマートだから"
+      decided_at: "2025-01-23"
+      related_feature: "F003"
+    
+    - id: "D004"
+      category: "データベース"
+      idea: "取引先をsuppliersテーブルで管理"
+      reason: "業者の非表示機能をDB保存するため"
+      decided_at: "2025-01-23"
+      related_feature: "F005"
+  
+  rejected: []
+  
+  postponed:
+    - id: "P001"
+      category: "原価計算"
+      idea: "歩留率の導入"
+      reason: "YAGNIで後回し"
+      postponed_at: "2025-01-20"
+      decide_by: ""
+      trigger: "必要になったら"
+      notes: "必要になったら列追加で対応可能"
+    
+    - id: "P002"
+      category: "権限管理"
+      idea: "業態PM、店舗マネージャー、スタッフの権限範囲"
+      reason: "フェーズ2で対応"
+      postponed_at: "2025-01-20"
+      decide_by: ""
+      trigger: "フェーズ2開始時"
+      notes: ""
+    
+    - id: "P003"
+      category: "UI"
+      idea: "業態切り替え方法（タブ/セレクト/フィルター）"
+      reason: "フェーズ2で対応"
+      postponed_at: "2025-01-20"
+      decide_by: ""
+      trigger: "フェーズ2開始時"
+      notes: ""
+    
+    - id: "P004"
+      category: "CSVインポート"
+      idea: "削除された商品の扱い"
+      reason: "運用しながら検討"
+      postponed_at: "2025-01-23"
+      decide_by: ""
+      trigger: "運用開始後"
+      notes: ""
+    
+    - id: "P005"
+      category: "原価計算"
+      idea: "賞味期限管理、発注ロット"
+      reason: "必要になったら検討"
+      postponed_at: "2025-01-20"
+      decide_by: ""
+      trigger: "必要になったら"
+      notes: ""
+
+
+# =====================================
+# 4. 現在の進捗
+# =====================================
+progress:
+  
+  current_phase:
+    step: "step3_implementation"
+    name: "実装フェーズ"
+    status: "in_progress"
+    started_at: "2025-01-23"
+    notes: "次のタスクはアイテム登録機能"
+    
+    current_task:
+      description: "アイテム登録機能の実装"
+      target_file: ""
+      blocked_by: ""
+  
+  completed_phases:
+    - step: "step0_setup"
+      name: "環境構築フェーズ"
+      completed_at: "2025-01-20"
+      summary: "Vite + TailwindCSS、Supabase、Git + GitHub、Vercel設定完了"
+    
+    - step: "step1_hearing"
+      name: "要件定義フェーズ"
+      completed_at: "2025-01-20"
+      summary: "システム概要、データ構造、フェーズ1機能を確定"
+  
+  implemented_features:
+    - feature_id: "F001"
+      implemented_at: "2025-01-23"
+      files_changed: ["index.html", "src/main.js"]
+    
+    - feature_id: "F002"
+      implemented_at: "2025-01-23"
+      files_changed: ["index.html", "src/main.js"]
+    
+    - feature_id: "F003"
+      implemented_at: "2025-01-23"
+      files_changed: ["index.html", "src/main.js"]
+    
+    - feature_id: "F004"
+      implemented_at: "2025-01-23"
+      files_changed: ["src/main.js"]
+    
+    - feature_id: "F005"
+      implemented_at: "2025-01-23"
+      files_changed: ["index.html", "src/main.js"]
+
+
+# =====================================
+# 5. ファイル構成
+# =====================================
+file_structure:
+  last_updated: "2025-01-23"
+  
+  tree: |
+    project-root/
+    ├── index.html
+    ├── vite.config.js
+    ├── package.json
+    ├── package-lock.json
+    ├── .env
+    ├── prompt/
+    │   ├── SYSTEM_PROMPT.yaml
+    │   ├── WORKFLOW.yaml
+    │   └── DATABASE.md
+    ├── public/
+    │   └── vite.svg
+    └── src/
+        ├── main.js
+        ├── supabase.js
+        ├── style.css
+        ├── counter.js
+        └── javascript.svg
+  
+  files:
+    - path: "index.html"
+      type: "html"
+      purpose: "メインページ（仕入れ商品一覧画面）"
+      imports: ["src/main.js", "src/style.css"]
+      notes: "CSVインポート、一覧表示、フィルター、非表示モーダル"
+      added_at: "2025-01-20"
+    
+    - path: "src/main.js"
+      type: "js"
+      purpose: "メインロジック"
+      imports: ["supabase.js"]
+      exports: []
+      notes: "CSVインポート、一覧表示、フラグ更新、業者非表示"
+      added_at: "2025-01-20"
+    
+    - path: "src/supabase.js"
+      type: "js"
+      purpose: "Supabase接続設定"
+      imports: []
+      exports: ["supabase"]
+      notes: "環境変数からURL/キーを読み込み"
+      added_at: "2025-01-20"
+    
+    - path: "src/style.css"
+      type: "css"
+      purpose: "TailwindCSSのインポート"
+      imports: []
+      notes: ""
+      added_at: "2025-01-20"
+    
+    - path: "prompt/DATABASE.md"
+      type: "md"
+      purpose: "データベース設計ドキュメント"
+      imports: []
+      notes: "テーブル定義、リレーション図"
+      added_at: "2025-01-22"
+    
+    - path: "prompt/SYSTEM_PROMPT.yaml"
+      type: "yaml"
+      purpose: "AIペルソナ・ルール定義"
+      imports: []
+      notes: ""
+      added_at: "2025-01-23"
+    
+    - path: "prompt/WORKFLOW.yaml"
+      type: "yaml"
+      purpose: "進捗管理・セーブデータ"
+      imports: []
+      notes: ""
+      added_at: "2025-01-23"
+  
+  directories:
+    - path: "src/"
+      purpose: "JavaScriptソースコード、CSS"
+    - path: "public/"
+      purpose: "静的ファイル"
+    - path: "prompt/"
+      purpose: "AIプロンプト・進捗管理ドキュメント"
+  
+  naming_conventions:
+    html: "ケバブケース（login.html, user-profile.html）"
+    js: "キャメルケース（auth.js, userProfile.js）"
+    css: "ケバブケース（style.css）"
+    directories: "ケバブケース（src/, styles/）"
+
+# =====================================
+# 6. 環境変数
+# =====================================
+environment_variables:
+  
+  local:
+    - name: "VITE_SUPABASE_URL"
+      description: "SupabaseのプロジェクトURL"
+      example: "https://xxxxx.supabase.co"
+    - name: "VITE_SUPABASE_ANON_KEY"
+      description: "Supabaseのanon key"
+      example: "eyJxxxxx..."
+  
+  production:
+    - name: "VITE_SUPABASE_URL"
+      set: true
+    - name: "VITE_SUPABASE_ANON_KEY"
+      set: true
+
+
+# =====================================
+# 7. 注意点・ハマったこと
+# =====================================
+cautions:
+  
+  discovered:
+    - id: "C001"
+      category: "CSVインポート"
+      issue: "インフォマートCSVはShift-JIS形式"
+      solution: "FileReaderでShift_JISを指定して読み込む"
+      discovered_at: "2025-01-23"
+      related_files: ["src/main.js"]
+    
+    - id: "C002"
+      category: "CSVインポート"
+      issue: "CSVに同じ商品コードが複数存在する"
+      solution: "更新日で新しい方を採用する"
+      discovered_at: "2025-01-23"
+      related_files: ["src/main.js"]
+    
+    - id: "C003"
+      category: "TailwindCSS"
+      issue: "スタイルが効かない"
+      solution: "index.htmlでstyle.cssを読み込む"
+      discovered_at: "2025-01-23"
+      related_files: ["index.html"]
+  
+  reminders:
+    - issue: "DBに変更を加えたらDATABASE.mdを更新する"
+      action: "テーブル追加/カラム変更時は必ず更新"
+
+
+# =====================================
+# 8. 未解決・保留事項
+# =====================================
+pending_items:
+  
+  unresolved: []
+  
+  waiting_for_user: []
+  
+  needs_research: []
+
+
+# =====================================
+# 9. セッション開始手順
+# =====================================
+session_start_procedure:
+
+  priority_order:
+    - rank: 1
+      check: "進捗YAMLの有無"
+      description: "セーブデータがあるかどうかが最優先"
+    - rank: 2
+      check: "ユーザーの発言内容"
+      description: "セーブデータがない場合のみ確認"
+
+  with_save_data:
+    trigger: "WORKFLOW.yaml が添付されている"
+    
+    phases:
+      
+      - phase: 1
+        name: "セーブデータ読み込み"
+        action:
+          - "WORKFLOW.yamlを解析"
+          - "SYSTEM_PROMPT.yamlを解析"
+          - "DATABASE.mdを解析（あれば）"
+        output: |
+          📂 セーブデータ読み込み完了
+          
+          ━━━━━━━━━━━━━━━━━━━━
+          📍 現在地: {current_phase.name}
+          📋 状態: {current_phase.status}
+          📝 前回のメモ: {current_phase.notes}
+          ━━━━━━━━━━━━━━━━━━━━
+      
+      - phase: 2
+        name: "必要ファイルの確認"
+        action:
+          - "current_taskを確認"
+          - "file_structureから関連ファイルを特定"
+          - "importsを辿って依存ファイルも特定"
+        output: |
+          📋 作業に必要なファイルを確認します
+          
+          ━━━━━━━━━━━━━━━━━━━━
+          🎯 今回の作業: {current_task.description}
+          ━━━━━━━━━━━━━━━━━━━━
+          
+          以下のファイルをアップロードしてください
+          
+          【必須】
+          {required_files_list}
+          
+          【あれば助かります】
+          {optional_files_list}
+      
+      - phase: 3
+        name: "ファイル内容の確認"
+        trigger: "ユーザーがファイルをアップロード後"
+        checklist:
+          - "ファイルが開ける・読める"
+          - "想定した内容と一致している"
+          - "セーブデータ（file_structure）と整合している"
+        on_mismatch: |
+          ⚠️ 確認させてください
+          
+          セーブデータと実際のファイルで違いがあります：
+          {mismatch_details}
+          
+          どちらが正しいですか？
+          1️⃣ 実際のファイルが正（セーブデータを更新）
+          2️⃣ セーブデータが正（ファイルを修正）
+      
+      - phase: 4
+        name: "作業開始確認"
+        required_before_start:
+          - "セーブデータ読み込み完了"
+          - "必要ファイル全て確認完了"
+          - "不整合があれば解消済み"
+        output: |
+          🚀 準備完了
+          
+          ━━━━━━━━━━━━━━━━━━━━
+          📍 現在地: {current_phase.name}
+          🎯 今回の作業: {current_task.description}
+          📄 対象ファイル: {target_files}
+          ━━━━━━━━━━━━━━━━━━━━
+          
+          この内容で作業開始してよいですか？
+        wait_for: "ユーザーのGOサイン"
+
+  without_save_data:
+    trigger: "WORKFLOW.yaml が添付されていない"
+    output: |
+      セーブデータがありません
+      
+      🆕 はじめから → 新規プロジェクト開始
+      🔍 つづきから → 状況を教えてください
+      
+      どちらですか？
+    
+    responses:
+      if_new:
+        triggers: ["はじめから", "新規", "新しく", "最初から"]
+        action: "Step 0（環境構築）から開始"
+      
+      if_continue:
+        triggers: ["つづきから", "続き", "途中から"]
+        action: "状況をヒアリングしてprogressを復元"
+
+  prohibited:
+    - "ファイルを見ずにコードを書く"
+    - "セーブデータだけ見て作業開始"
+    - "「たぶんこうなってる」で進める"
+    - "必要ファイルを聞かずに作業開始"
+
+
+# =====================================
+# 10. 開発プロセス（Step0〜4）
+# =====================================
+development_process:
+
+  step0_setup:
+    name: "環境構築フェーズ"
+    when: "新規プロジェクトの場合のみ"
+    
+    checklist:
+      - step: 1
+        name: "Node.jsインストール"
+        completed: true
+      - step: 2
+        name: "VSCode設定"
+        completed: true
+      - step: 3
+        name: "Viteでプロジェクト作成"
+        completed: true
+      - step: 4
+        name: "TailwindCSS導入"
+        completed: true
+      - step: 5
+        name: "Supabaseプロジェクト作成"
+        completed: true
+      - step: 6
+        name: "Supabase接続設定"
+        completed: true
+      - step: 7
+        name: "Git初期化・最初のコミット"
+        completed: true
+      - step: 8
+        name: "GitHub連携"
+        completed: true
+      - step: 9
+        name: "Vercel連携"
+        completed: true
+    
+    completion_check: "npm run devでローカル起動・Supabase接続確認"
+    on_complete: "progressを更新してStep 1へ移行"
+
+  step1_hearing:
+    name: "要件定義フェーズ"
+    golden_rule: "要件が固まるまでコードは書かない"
+    
+    question_rules:
+      format: "一問一答形式"
+      questions_per_turn: 1
+      emphasis: "質問は必ず1個ずつ"
+      
+      option_format:
+        options_count: 3
+        required_elements:
+          - "メリット"
+          - "デメリット"
+          - "推奨案と理由"
+      
+      when_user_delegates:
+        trigger_phrases: ["お任せ", "任せる", "おまかせ"]
+        action: "推奨案を採用する前提で進める"
+    
+    on_complete: "決定事項をdecisionsに追加してStep 2へ"
+
+  step2_agreement:
+    name: "合意形成フェーズ"
+    
+    required_before_coding:
+      - "現状の認識・分析結果"
+      - "具体的な解決策・実装方針"
+      - "想定するファイル構成"
+    
+    confirmation_required:
+      phrase: "この方針で実装を進めてよいですか？"
+      must_wait_for: "ユーザーのGOサイン"
+    
+    on_complete: "file_structureを更新してStep 3へ"
+
+  step3_implementation:
+    name: "実装フェーズ"
+    
+    output_rules:
+      declaration_before_code:
+        required_info:
+          - "対象ファイル名"
+          - "対象箇所"
+          - "変更種別（新規追加/置き換え/削除）"
+      
+      one_file_at_a_time:
+        rule: "複数ファイル変更時も1つずつ出して動作確認してから次へ"
+      
+      no_abbreviation:
+        prohibited_patterns:
+          - "// 既存コード"
+          - "// 省略"
+          - "// ..."
+        requirement: "コピペでそのまま動く完全なコードを提示"
+      
+      success_check:
+        action: "コード渡した後「ここがこう動いたらOK」と教える"
+    
+    impact_check:
+      procedure:
+        - "変更する箇所を特定"
+        - "その変更が影響する他の箇所を全部洗い出す"
+        - "影響先も含めて全部修正する"
+        - "修正漏れがないか確認してから渡す"
+      rule: "影響あると伝えるだけではなく修正まで責任持つ"
+    
+    on_file_change: "file_structureを更新"
+
+  step4_debug:
+    name: "デバッグ・問題解決フェーズ"
+    golden_rule: "いきなりコード書かない"
+    
+    debug_flow:
+      - step: 1
+        name: "状況整理"
+        action: "何が起きているか整理する"
+      - step: 2
+        name: "仮説立案"
+        action: "原因の仮説を立てる"
+      - step: 3
+        name: "検証方法の提示"
+        action: "ログ追加などの検証コードを出す"
+        note: "この時点では修正コードは出さない"
+      - step: 4
+        name: "ユーザーが検証実行"
+        action: "ユーザーに検証してもらう"
+      - step: 5
+        name: "結果分析・原因特定"
+        action: "ログ結果から原因を断定"
+      - step: 6
+        name: "修正許可を取る"
+        action: "「この方針で直してよいですか？」と確認"
+      - step: 7
+        name: "修正コード提示"
+        action: "許可が出てからコードを書く"
+    
+    prohibited:
+      - "いきなり修正コードを出す"
+      - "仮説だけで勝手に修正"
+      - "当てずっぽうの修正"
+    
+    on_complete: "解決内容を記録してStep 3に戻る"
+
+
+# =====================================
+# 11. 進捗更新ルール
+# =====================================
+progress_update_rules:
+  
+  when_to_update:
+    - trigger: "フェーズ完了時"
+      action: "completed_phasesに追加、current_phaseを更新"
+    - trigger: "重要な決定事項が出たとき"
+      action: "decisionsに追加"
+    - trigger: "ファイルを追加/変更したとき"
+      action: "file_structureを更新"
+    - trigger: "保留事項が発生したとき"
+      action: "pending_itemsに追加"
+    - trigger: "セッション終了時"
+      action: "last_updatedを更新、現在の状態をまとめる"
+    - trigger: "DBに変更を加えたとき"
+      action: "DATABASE.mdを更新"
+    - trigger: "機能の実装が完了したとき"
+      action: "ユーザーに「この機能完了でいいですか？」と確認してからfeaturesのstatusをdoneに更新"
+    
+  save_output:
+    instruction: "セーブ時は更新後のYAML全体を出力する"
+    message: |
+      💾 セーブデータを更新しました
+      
+      ━━━━━━━━━━━━━━━━━━━━
+      📍 現在地: {current_phase.name}
+      ✅ 完了済み: {completed_phases_count}
+      📝 決定事項: {decisions_count}件
+      ⚠️ 注意点: {cautions_count}件
+      ━━━━━━━━━━━━━━━━━━━━
+      
+      以下のYAMLを保存してください
+
+
+# =====================================
+# 12. 開発の流れまとめ
+# =====================================
+workflow_summary:
+  
+  initial_setup:
+    description: "Step 0完了後の運用"
+    flow:
+      - "ローカルで開発（npm run dev）"
+      - "区切りついたらWORKFLOW.yaml / DATABASE.md を更新"
+      - "git add . → git commit → git push"
+      - "Vercelが自動デプロイ"
+    important: "⚠️ yaml/md更新してからgit pushが鉄則！"
+  
+  next_session:
+    description: "次回の開発再開時"
+    what_to_provide:
+      - "SYSTEM_PROMPT.yaml"
+      - "WORKFLOW.yaml（進捗情報入り）"
+      - "DATABASE.md（あれば）"
+    result: "Rinaがprogressセクションを読んで続きからサポート"
+  
+  session_end:
+    description: "セッション終了時"
+    action: "Rinaが更新後のセーブデータを出力する"
+    user_action: "YAMLを保存しておく"

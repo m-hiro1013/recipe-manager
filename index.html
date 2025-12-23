@@ -5,11 +5,121 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>レシピ管理システム</title>
-  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/src/style.css" />
 </head>
 
-<body>
-  <h1 class="text-3xl font-bold text-blue-500 p-4">Tailwind動いてる！</h1>
+<body class="bg-gray-100 min-h-screen">
+  <!-- ヘッダー -->
+  <header class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-20">
+    <div class="max-w-6xl mx-auto flex justify-between items-center">
+      <h1 class="text-2xl font-bold">🍳 レシピ管理システム</h1>
+      <div id="countDisplay" class="text-lg bg-blue-500 px-4 py-1 rounded-full"></div>
+    </div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main class="max-w-6xl mx-auto p-4 space-y-4">
+
+    <!-- CSVインポートセクション（折りたたみ式） -->
+    <details class="bg-white rounded-lg shadow-md">
+      <summary class="p-4 cursor-pointer font-bold text-gray-800 hover:bg-gray-50">
+        📥 仕入れ商品インポート
+      </summary>
+      <div class="p-4 pt-0">
+        <p class="text-gray-600 mb-4 text-sm">
+          インフォマートからダウンロードしたCSVファイルを選択してください。
+        </p>
+        <div class="flex flex-wrap gap-4 items-center">
+          <input type="file" id="csvFile" accept=".csv" class="block text-sm text-gray-500
+                   file:mr-4 file:py-2 file:px-4
+                   file:rounded-md file:border-0
+                   file:text-sm file:font-semibold
+                   file:bg-blue-50 file:text-blue-700
+                   hover:file:bg-blue-100" />
+          <button id="importBtn" class="bg-blue-600 text-white px-6 py-2 rounded-md font-semibold
+                   hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed">
+            インポート実行
+          </button>
+        </div>
+        <div id="resultArea" class="mt-4 hidden">
+          <div id="resultMessage" class="p-4 rounded-md"></div>
+        </div>
+      </div>
+    </details>
+
+    <!-- フィルターセクション（sticky） -->
+    <div class="bg-white rounded-lg shadow-md p-4 sticky top-16 z-10">
+      <!-- 検索ボックス -->
+      <div class="mb-3">
+        <input type="text" id="searchInput" placeholder="🔍 商品名で検索..."
+          class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-lg" />
+      </div>
+
+      <!-- 表示切り替え -->
+      <div class="mb-3 flex flex-wrap items-center gap-4">
+        <span class="text-sm font-semibold text-gray-700">📋 表示切り替え:</span>
+        <div class="flex gap-2">
+          <label class="flex items-center gap-1 cursor-pointer">
+            <input type="radio" name="activeFilter" value="off" checked class="active-filter" />
+            <span class="text-sm px-2 py-1 bg-gray-100 rounded">OFFだけ</span>
+          </label>
+          <label class="flex items-center gap-1 cursor-pointer">
+            <input type="radio" name="activeFilter" value="on" class="active-filter" />
+            <span class="text-sm px-2 py-1 bg-green-100 rounded">ONだけ</span>
+          </label>
+          <label class="flex items-center gap-1 cursor-pointer">
+            <input type="radio" name="activeFilter" value="all" class="active-filter" />
+            <span class="text-sm px-2 py-1 bg-blue-100 rounded">全部</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 取引先フィルター -->
+      <div>
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="text-sm font-semibold text-gray-700">🏢 取引先で絞り込み</h3>
+          <div class="flex gap-2">
+            <button id="selectAllBtn"
+              class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">全選択</button>
+            <button id="deselectAllBtn"
+              class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200">全解除</button>
+            <button id="showHiddenBtn" class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200">非表示リスト
+              (<span id="hiddenCount">0</span>件)</button>
+          </div>
+        </div>
+        <div id="supplierFilter" class="flex flex-wrap gap-2 max-h-24 overflow-y-auto p-2 bg-gray-50 rounded-lg">
+          <!-- JSで動的に生成 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 商品一覧 -->
+    <div class="bg-white rounded-lg shadow-md p-4">
+      <div id="productList" class="space-y-4">
+        <!-- JSで動的に生成 -->
+      </div>
+
+      <!-- ページネーション -->
+      <div id="pagination" class="flex justify-center items-center gap-4 mt-6 pt-4 border-t">
+        <!-- JSで動的に生成 -->
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 非表示リストモーダル -->
+  <div id="hiddenModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-30 flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[80vh] overflow-hidden">
+      <div class="p-4 border-b flex justify-between items-center">
+        <h2 class="text-lg font-bold">🚫 非表示にした取引先</h2>
+        <button id="closeHiddenModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+      </div>
+      <div id="hiddenList" class="p-4 overflow-y-auto max-h-[60vh]">
+        <!-- JSで動的に生成 -->
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="/src/main.js"></script>
 </body>
 
