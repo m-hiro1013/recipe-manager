@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>商品 | レシピ管理システム</title>
+    <link rel="stylesheet" href="/src/style.css" />
+    <style>
+        /* ❓ホバー用のスタイル */
+        .help-tooltip {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            cursor: help;
+        }
+
+        .help-tooltip .tooltip-text {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: calc(100% + 8px);
+            background-color: #1f2937;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: normal;
+            white-space: nowrap;
+            z-index: 100;
+            transition: opacity 0.2s, visibility 0.2s;
+        }
+
+        .help-tooltip .tooltip-text.tooltip-wide {
+            white-space: normal;
+            width: 200px;
+            text-align: left;
+        }
+
+        .help-tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .help-tooltip .tooltip-text::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: #1f2937;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+
+    <!-- サイドメニュー -->
+    <aside id="sidebar"
+        class="fixed top-0 left-0 h-screen bg-gray-800 text-white flex flex-col z-30 transition-all duration-300 w-56">
+        <!-- ロゴ部分 -->
+        <div class="p-4 border-b border-gray-700 flex items-center justify-between">
+            <h1 id="logoText" class="text-lg font-bold whitespace-nowrap overflow-hidden">🍳 レシピ管理</h1>
+            <button id="toggleBtn" class="text-gray-400 hover:text-white p-1">
+                <svg id="toggleIcon" class="w-6 h-6 transition-transform duration-300" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                </svg>
+            </button>
+        </div>
+        <!-- メニュー -->
+        <nav class="flex-1 p-4">
+            <ul class="space-y-2">
+                <li>
+                    <a href="/import.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="インポート">
+                        <span class="flex-shrink-0">📥</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">インポート</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="仕入れ商品">
+                        <span class="flex-shrink-0">📦</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">仕入れ商品</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/items.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="アイテム">
+                        <span class="flex-shrink-0">🧩</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">アイテム</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/preparations.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="仕込み品">
+                        <span class="flex-shrink-0">🍳</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">仕込み品</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dishes.html" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-600 text-white"
+                        title="商品">
+                        <span class="flex-shrink-0">🍽️</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">商品</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/courses.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="コース">
+                        <span class="flex-shrink-0">📜</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">コース</span>
+                    </a>
+                </li>
+                <li class="pt-4 border-t border-gray-700 mt-4">
+                    <a href="/master.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="マスタ管理">
+                        <span class="flex-shrink-0">⚙️</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">マスタ管理</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- メインコンテンツ -->
+    <div id="mainContent" class="transition-all duration-300 ml-56">
+        <!-- ヘッダー -->
+        <header class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-20">
+            <div class="max-w-6xl mx-auto flex justify-between items-center">
+                <h2 class="text-xl font-bold">🍽️ 商品一覧</h2>
+                <button id="openCreateModal"
+                    class="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-50 transition-colors">
+                    ＋ 新規作成
+                </button>
+            </div>
+        </header>
+
+        <!-- メインコンテンツ -->
+        <main class="max-w-6xl mx-auto p-4 space-y-4">
+
+            <!-- 統計情報 -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white rounded-lg shadow-md p-4">
+                    <p class="text-sm text-gray-500 mb-1">登録商品数</p>
+                    <p id="dishCount" class="text-2xl font-bold text-gray-800">---</p>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-4">
+                    <p class="text-sm text-gray-500 mb-1">利用可能な材料</p>
+                    <p id="ingredientCount" class="text-2xl font-bold text-green-600">---</p>
+                </div>
+            </div>
+
+            <!-- 検索・フィルター -->
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <input type="text" id="searchInput" placeholder="🔍 商品名・読み仮名で検索..."
+                    class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-lg mb-3" />
+                <div class="flex items-center gap-4">
+                    <span class="text-sm text-gray-600">表示:</span>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="reviewFilter" value="all" checked class="review-filter-radio" />
+                        <span class="text-sm">すべて</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="reviewFilter" value="has_review_ingredient"
+                            class="review-filter-radio" />
+                        <span class="text-sm text-orange-600 font-bold">材料に要確認あり</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 商品一覧 -->
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <div id="dishList" class="space-y-2">
+                    <!-- JSで動的に生成 -->
+                </div>
+
+                <!-- 空の場合 -->
+                <div id="emptyState" class="hidden text-center py-12">
+                    <p class="text-4xl mb-4">🍽️</p>
+                    <p class="text-gray-500 mb-4">商品がまだ登録されていません</p>
+                    <p class="text-sm text-gray-400">「新規作成」ボタンから、商品を登録しましょう</p>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ===== 商品作成モーダル ===== -->
+    <div id="createModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-40 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 class="text-lg font-bold">🍽️ 商品新規作成</h2>
+                <button id="closeCreateModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[70vh]">
+
+                <!-- セクション選択 -->
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        セクション <span class="text-red-500">*</span>
+                    </label>
+                    <select id="dishSection"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500">
+                        <option value="">選択してください</option>
+                        <!-- JSで動的に生成 -->
+                    </select>
+                </div>
+
+                <!-- 商品名 -->
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        商品名 <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="dishName" placeholder="例：マルゲリータピザ"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                </div>
+
+                <!-- 読み仮名 -->
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        読み仮名 <span class="text-red-500">*</span>
+                        <span class="help-tooltip ml-1">
+                            <span class="text-gray-400 text-xs">❓</span>
+                            <span class="tooltip-text tooltip-wide">五十音順のソート・検索に使用します</span>
+                        </span>
+                    </label>
+                    <input type="text" id="dishKana" placeholder="例:マルゲリータピザ"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                    <p class="mt-1 text-sm text-gray-500">ひらがな・カタカナで入力（自動で半角カタカナに変換）</p>
+                </div>
+
+                <!-- 売価 -->
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        売価（税抜）
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-500">¥</span>
+                        <input type="number" id="dishSellingPrice" placeholder="例:1200"
+                            class="flex-1 p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                    </div>
+                    <p id="taxIncludedPreview" class="mt-1 text-sm text-gray-500"></p>
+                </div>
+
+                <!-- 材料 -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-bold text-gray-700">
+                            材料 <span class="text-red-500">*</span>
+                        </label>
+                        <button type="button" id="openIngredientModal"
+                            class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200">
+                            ＋ 材料を追加
+                        </button>
+                    </div>
+                    <div id="ingredientList" class="border-2 border-gray-200 rounded-lg p-4 min-h-[100px]">
+                        <p id="noIngredientText" class="text-gray-400 text-center py-4">材料がまだ追加されていません</p>
+                    </div>
+                </div>
+
+                <!-- 原価プレビュー -->
+                <div class="bg-blue-50 rounded-lg p-4 mb-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">原価（自動計算）</p>
+                            <p id="totalCostPreview" class="text-2xl font-bold text-blue-600">¥0</p>
+                        </div>
+                        <div class="text-right">
+                            <p id="costRatePreview" class="text-sm font-bold"></p>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2">※ 仕上がりは1単位</p>
+                </div>
+
+                <!-- ボタン -->
+                <div class="flex gap-4">
+                    <button id="cancelCreate"
+                        class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                        キャンセル
+                    </button>
+                    <button id="submitCreate"
+                        class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                        作成する
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 材料選択モーダル ===== -->
+    <div id="ingredientModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl flex flex-col" style="width: 80%; height: 85vh;">
+            <div class="p-4 border-b flex justify-between items-center flex-shrink-0">
+                <h2 class="text-lg font-bold">📦 材料を選択</h2>
+                <button id="closeIngredientModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+
+            <!-- タブ -->
+            <div class="border-b flex-shrink-0">
+                <div class="flex">
+                    <button id="tabItems"
+                        class="flex-1 px-4 py-3 text-center font-medium border-b-2 border-blue-600 text-blue-600">
+                        🧩 アイテム
+                    </button>
+                    <button id="tabPreparations"
+                        class="flex-1 px-4 py-3 text-center font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                        🍳 仕込み品
+                    </button>
+                    <button id="tabProducts"
+                        class="flex-1 px-4 py-3 text-center font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                        📦 仕入れ商品
+                    </button>
+                </div>
+            </div>
+
+            <!-- タブコンテンツ -->
+            <div class="flex-1 overflow-hidden flex flex-col" style="min-height: 0;">
+                <!-- アイテムタブ -->
+                <div id="tabContentItems" class="flex-1 flex flex-col overflow-hidden">
+                    <div class="p-4 border-b flex-shrink-0">
+                        <input type="text" id="itemSearchInput" placeholder="🔍 アイテム名・読み仮名で検索..."
+                            class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                    </div>
+                    <div id="itemSelectList" class="flex-1 overflow-y-auto p-4" style="min-height: 0;">
+                        <!-- JSで動的に生成 -->
+                    </div>
+                </div>
+
+                <!-- 仕込み品タブ -->
+                <div id="tabContentPreparations" class="flex-1 flex flex-col overflow-hidden hidden">
+                    <div class="p-4 border-b flex-shrink-0">
+                        <input type="text" id="prepSearchInput" placeholder="🔍 仕込み品名・読み仮名で検索..."
+                            class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                    </div>
+                    <div id="prepSelectList" class="flex-1 overflow-y-auto p-4" style="min-height: 0;">
+                        <!-- JSで動的に生成 -->
+                    </div>
+                </div>
+
+                <!-- 仕入れ商品タブ -->
+                <div id="tabContentProducts" class="flex-1 flex flex-col overflow-hidden hidden">
+                    <div class="p-4 border-b flex-shrink-0">
+                        <div class="flex gap-4 mb-3">
+                            <select id="supplierSelect"
+                                class="flex-1 p-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500">
+                                <option value="">全ての業者</option>
+                            </select>
+                            <div class="flex items-center gap-2">
+                                <label class="flex items-center gap-1 cursor-pointer">
+                                    <input type="radio" name="productActiveFilter" value="on" checked
+                                        class="product-active-filter" />
+                                    <span class="text-sm">使用ON</span>
+                                </label>
+                                <label class="flex items-center gap-1 cursor-pointer">
+                                    <input type="radio" name="productActiveFilter" value="all"
+                                        class="product-active-filter" />
+                                    <span class="text-sm">全て</span>
+                                </label>
+                            </div>
+                        </div>
+                        <input type="text" id="productSearchInput" placeholder="🔍 商品名で検索..."
+                            class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                    </div>
+                    <div id="productSelectList" class="flex-1 overflow-y-auto" style="min-height: 0;">
+                        <!-- JSで動的に生成 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 選択状況とボタン -->
+            <div class="p-4 border-t flex justify-between items-center flex-shrink-0">
+                <span id="selectedCount" class="text-sm text-gray-600">選択中: 0件</span>
+                <button id="addSelectedIngredients"
+                    class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    disabled>
+                    選択した材料を追加
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== クイックアイテム作成モーダル ===== -->
+    <div id="quickItemModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 class="text-lg font-bold">🧩 クイックアイテム作成</h2>
+                <button id="closeQuickItemModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div class="p-6">
+                <input type="hidden" id="quickProductCode" />
+                <input type="hidden" id="quickProductPrice" />
+
+                <div class="mb-4 p-3 bg-gray-100 rounded-lg">
+                    <p class="text-sm text-gray-500">選択した商品</p>
+                    <p id="quickProductInfo" class="font-medium text-gray-800"></p>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        アイテム名 <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="quickItemName" placeholder="例：カットレモン"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        読み仮名 <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="quickItemKana" placeholder="例：カットレモン"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">
+                            使用単位 <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="quickItemUnit" placeholder="例：個"
+                            class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">
+                            取れる数 <span class="text-red-500">*</span>
+                        </label>
+                        <input type="number" id="quickYieldQuantity" placeholder="例：10" step="0.01" min="0.01"
+                            class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                    </div>
+                </div>
+
+                <div class="bg-blue-50 rounded-lg p-4 mb-6">
+                    <p class="text-sm text-gray-600 mb-1">単位原価</p>
+                    <p id="quickUnitCostPreview" class="text-xl font-bold text-blue-600">---</p>
+                </div>
+
+                <div class="flex gap-4">
+                    <button id="cancelQuickItem"
+                        class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                        キャンセル
+                    </button>
+                    <button id="submitQuickItem"
+                        class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                        作成して追加
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 商品編集モーダル ===== -->
+    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-40 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 class="text-lg font-bold">🍽️ 商品編集</h2>
+                <button id="closeEditModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[70vh]">
+                <input type="hidden" id="editDishId" />
+
+                <!-- セクション選択 -->
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        セクション <span class="text-red-500">*</span>
+                    </label>
+                    <select id="editDishSection"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500">
+                        <option value="">選択してください</option>
+                        <!-- JSで動的に生成 -->
+                    </select>
+                </div>
+
+                <!-- 商品名 -->
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        商品名 <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="editDishName"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                </div>
+
+                <!-- 読み仮名 -->
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        読み仮名 <span class="text-red-500">*</span>
+                        <span class="help-tooltip ml-1">
+                            <span class="text-gray-400 text-xs">❓</span>
+                            <span class="tooltip-text tooltip-wide">五十音順のソート・検索に使用します</span>
+                        </span>
+                    </label>
+                    <input type="text" id="editDishKana"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                    <p class="mt-1 text-sm text-gray-500">ひらがな・カタカナで入力（自動で半角カタカナに変換）</p>
+                </div>
+
+                <!-- 売価 -->
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        売価（税抜）
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-500">¥</span>
+                        <input type="number" id="editDishSellingPrice" placeholder="例:1200"
+                            class="flex-1 p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                    </div>
+                    <p id="editTaxIncludedPreview" class="mt-1 text-sm text-gray-500"></p>
+                </div>
+
+                <!-- 材料 -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-bold text-gray-700">
+                            材料 <span class="text-red-500">*</span>
+                        </label>
+                        <button type="button" id="openEditIngredientModal"
+                            class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200">
+                            ＋ 材料を追加
+                        </button>
+                    </div>
+                    <div id="editIngredientList" class="border-2 border-gray-200 rounded-lg p-4 min-h-[100px]">
+                        <p id="editNoIngredientText" class="text-gray-400 text-center py-4">材料がまだ追加されていません</p>
+                    </div>
+                </div>
+
+                <!-- 原価プレビュー -->
+                <div class="bg-blue-50 rounded-lg p-4 mb-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">原価（自動計算）</p>
+                            <p id="editTotalCostPreview" class="text-2xl font-bold text-blue-600">¥0</p>
+                        </div>
+                        <div class="text-right">
+                            <p id="editCostRatePreview" class="text-sm font-bold"></p>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2">※ 仕上がりは1単位</p>
+                </div>
+
+                <!-- ボタン -->
+                <div class="flex gap-4">
+                    <button id="deleteDish"
+                        class="px-6 py-3 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition-colors">
+                        削除
+                    </button>
+                    <button id="cancelEdit"
+                        class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                        キャンセル
+                    </button>
+                    <button id="submitEdit"
+                        class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                        更新する
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/dishes.js"></script>
+
+    <!-- サイドメニュー開閉スクリプト -->
+    <script>
+        const sidebar = document.getElementById('sidebar')
+        const mainContent = document.getElementById('mainContent')
+        const toggleBtn = document.getElementById('toggleBtn')
+        const toggleIcon = document.getElementById('toggleIcon')
+        const logoText = document.getElementById('logoText')
+        const menuTexts = document.querySelectorAll('.menu-text')
+
+        let isOpen = true
+
+        toggleBtn.addEventListener('click', () => {
+            isOpen = !isOpen
+
+            if (isOpen) {
+                sidebar.classList.remove('w-16')
+                sidebar.classList.add('w-56')
+                mainContent.classList.remove('ml-16')
+                mainContent.classList.add('ml-56')
+                toggleIcon.classList.remove('rotate-180')
+                logoText.classList.remove('hidden')
+                menuTexts.forEach(el => el.classList.remove('hidden'))
+            } else {
+                sidebar.classList.remove('w-56')
+                sidebar.classList.add('w-16')
+                mainContent.classList.remove('ml-56')
+                mainContent.classList.add('ml-16')
+                toggleIcon.classList.add('rotate-180')
+                logoText.classList.add('hidden')
+                menuTexts.forEach(el => el.classList.add('hidden'))
+            }
+        })
+    </script>
+</body>
+
+</html>

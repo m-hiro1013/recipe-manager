@@ -4,111 +4,171 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>レシピ管理システム</title>
+  <title>仕入れ商品 | レシピ管理システム</title>
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 
 <body class="bg-gray-100 min-h-screen">
-  <!-- ヘッダー -->
-  <header class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-20">
-    <div class="max-w-6xl mx-auto flex justify-between items-center">
-      <h1 class="text-2xl font-bold">🍳 レシピ管理システム</h1>
-      <div id="countDisplay" class="text-lg bg-blue-500 px-4 py-1 rounded-full"></div>
+
+  <!-- サイドメニュー -->
+  <aside id="sidebar"
+    class="fixed top-0 left-0 h-screen bg-gray-800 text-white flex flex-col z-30 transition-all duration-300 w-56">
+    <!-- ロゴ部分 -->
+    <div class="p-4 border-b border-gray-700 flex items-center justify-between">
+      <h1 id="logoText" class="text-lg font-bold whitespace-nowrap overflow-hidden">🍳 レシピ管理</h1>
+      <button id="toggleBtn" class="text-gray-400 hover:text-white p-1">
+        <svg id="toggleIcon" class="w-6 h-6 transition-transform duration-300" fill="none" stroke="currentColor"
+          viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7">
+          </path>
+        </svg>
+      </button>
     </div>
-  </header>
+    <!-- メニュー -->
+    <nav class="flex-1 p-4">
+      <ul class="space-y-2">
+        <li>
+          <a href="/import.html"
+            class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors" title="インポート">
+            <span class="flex-shrink-0">📥</span>
+            <span class="menu-text whitespace-nowrap overflow-hidden">インポート</span>
+          </a>
+        </li>
+        <li>
+          <a href="/" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-600 text-white" title="仕入れ商品">
+            <span class="flex-shrink-0">📦</span>
+            <span class="menu-text whitespace-nowrap overflow-hidden">仕入れ商品</span>
+          </a>
+        </li>
+        <li>
+          <a href="/items.html" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+            title="アイテム">
+            <span class="flex-shrink-0">🧩</span>
+            <span class="menu-text whitespace-nowrap overflow-hidden">アイテム</span>
+          </a>
+        </li>
+        <li>
+          <a href="/preparations.html"
+            class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors" title="仕込み品">
+            <span class="flex-shrink-0">🍳</span>
+            <span class="menu-text whitespace-nowrap overflow-hidden">仕込み品</span>
+          </a>
+        </li>
+        <li>
+          <a href="/dishes.html"
+            class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors" title="商品">
+            <span class="flex-shrink-0">🍽️</span>
+            <span class="menu-text whitespace-nowrap overflow-hidden">商品</span>
+          </a>
+        </li>
+        <li>
+          <a href="/courses.html"
+            class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors" title="コース">
+            <span class="flex-shrink-0">📜</span>
+            <span class="menu-text whitespace-nowrap overflow-hidden">コース</span>
+          </a>
+        </li>
+        <li class="pt-4 border-t border-gray-700 mt-4">
+          <a href="/master.html"
+            class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors" title="マスタ管理">
+            <span class="flex-shrink-0">⚙️</span>
+            <span class="menu-text whitespace-nowrap overflow-hidden">マスタ管理</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </aside>
 
   <!-- メインコンテンツ -->
-  <main class="max-w-6xl mx-auto p-4 space-y-4">
-
-    <!-- CSVインポートセクション（折りたたみ式） -->
-    <details class="bg-white rounded-lg shadow-md">
-      <summary class="p-4 cursor-pointer font-bold text-gray-800 hover:bg-gray-50">
-        📥 仕入れ商品インポート
-      </summary>
-      <div class="p-4 pt-0">
-        <p class="text-gray-600 mb-4 text-sm">
-          インフォマートからダウンロードしたCSVファイルを選択してください。
-        </p>
-        <div class="flex flex-wrap gap-4 items-center">
-          <input type="file" id="csvFile" accept=".csv" class="block text-sm text-gray-500
-                   file:mr-4 file:py-2 file:px-4
-                   file:rounded-md file:border-0
-                   file:text-sm file:font-semibold
-                   file:bg-blue-50 file:text-blue-700
-                   hover:file:bg-blue-100" />
-          <button id="importBtn" class="bg-blue-600 text-white px-6 py-2 rounded-md font-semibold
-                   hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed">
-            インポート実行
-          </button>
-        </div>
-        <div id="resultArea" class="mt-4 hidden">
-          <div id="resultMessage" class="p-4 rounded-md"></div>
-        </div>
+  <div id="mainContent" class="transition-all duration-300 ml-56">
+    <!-- ヘッダー -->
+    <header class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-20">
+      <div class="max-w-6xl mx-auto flex justify-between items-center">
+        <h2 class="text-xl font-bold">📦 仕入れ商品一覧</h2>
+        <div id="countDisplay" class="text-lg bg-blue-500 px-4 py-1 rounded-full"></div>
       </div>
-    </details>
+    </header>
 
-    <!-- フィルターセクション（sticky） -->
-    <div class="bg-white rounded-lg shadow-md p-4 sticky top-16 z-10">
-      <!-- 検索ボックス -->
-      <div class="mb-3">
-        <input type="text" id="searchInput" placeholder="🔍 商品名で検索..."
-          class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-lg" />
-      </div>
+    <!-- メインコンテンツ -->
+    <main class="max-w-6xl mx-auto p-4 space-y-4">
 
-      <!-- 表示切り替え -->
-      <div class="mb-3 flex flex-wrap items-center gap-4">
-        <span class="text-sm font-semibold text-gray-700">📋 表示切り替え:</span>
-        <div class="flex gap-2">
-          <label class="flex items-center gap-1 cursor-pointer">
-            <input type="radio" name="activeFilter" value="off" checked class="active-filter" />
-            <span class="text-sm px-2 py-1 bg-gray-100 rounded">OFFだけ</span>
-          </label>
-          <label class="flex items-center gap-1 cursor-pointer">
-            <input type="radio" name="activeFilter" value="on" class="active-filter" />
-            <span class="text-sm px-2 py-1 bg-green-100 rounded">ONだけ</span>
-          </label>
-          <label class="flex items-center gap-1 cursor-pointer">
-            <input type="radio" name="activeFilter" value="all" class="active-filter" />
-            <span class="text-sm px-2 py-1 bg-blue-100 rounded">全部</span>
-          </label>
+      <!-- フィルターセクション（sticky） -->
+      <div class="bg-white rounded-lg shadow-md p-4 sticky top-16 z-10">
+        <!-- 検索ボックス -->
+        <div class="mb-3">
+          <input type="text" id="searchInput" placeholder="🔍 商品名で検索..."
+            class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-lg" />
         </div>
-      </div>
 
-      <!-- 取引先フィルター -->
-      <div>
-        <div class="flex justify-between items-center mb-2">
-          <h3 class="text-sm font-semibold text-gray-700">🏢 取引先で絞り込み</h3>
+        <!-- 表示切り替え -->
+        <div class="mb-3 flex flex-wrap items-center gap-4">
+          <span class="text-sm font-semibold text-gray-700">📋 表示切り替え:</span>
           <div class="flex gap-2">
-            <button id="selectAllBtn"
-              class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">全選択</button>
-            <button id="deselectAllBtn"
-              class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200">全解除</button>
-            <button id="showHiddenBtn" class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200">非表示リスト
-              (<span id="hiddenCount">0</span>件)</button>
+            <label class="flex items-center gap-1 cursor-pointer">
+              <input type="radio" name="activeFilter" value="off" class="active-filter" />
+              <span class="text-sm px-2 py-1 bg-gray-100 rounded">OFFだけ</span>
+            </label>
+            <label class="flex items-center gap-1 cursor-pointer">
+              <input type="radio" name="activeFilter" value="on" class="active-filter" />
+              <span class="text-sm px-2 py-1 bg-green-100 rounded">ONだけ</span>
+            </label>
+            <label class="flex items-center gap-1 cursor-pointer">
+              <input type="radio" name="activeFilter" value="all" checked class="active-filter" />
+              <span class="text-sm px-2 py-1 bg-blue-100 rounded">全部</span>
+            </label>
           </div>
         </div>
-        <div id="supplierFilter" class="flex flex-wrap gap-2 max-h-24 overflow-y-auto p-2 bg-gray-50 rounded-lg">
+
+        <!-- 取引先フィルター -->
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="text-sm font-semibold text-gray-700">🏢 取引先で絞り込み</h3>
+            <div class="flex gap-2">
+              <button id="selectAllBtn"
+                class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">全選択</button>
+              <button id="deselectAllBtn"
+                class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200">全解除</button>
+              <button id="showHiddenBtn"
+                class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200">非表示リスト
+                (<span id="hiddenCount">0</span>件)</button>
+            </div>
+          </div>
+          <div id="supplierFilter" class="flex flex-wrap gap-2 max-h-24 overflow-y-auto p-2 bg-gray-50 rounded-lg">
+            <!-- JSで動的に生成 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 商品一覧 -->
+      <div class="bg-white rounded-lg shadow-md p-4">
+        <!-- 表示モード切り替え -->
+        <div class="flex justify-end mb-4">
+          <div class="inline-flex rounded-lg border border-gray-200 overflow-hidden">
+            <button id="detailViewBtn" class="view-mode-btn px-4 py-2 text-sm font-medium bg-blue-600 text-white">
+              詳細表示
+            </button>
+            <button id="compactViewBtn"
+              class="view-mode-btn px-4 py-2 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50">
+              コンパクト表示
+            </button>
+          </div>
+        </div>
+
+        <div id="productList" class="space-y-4">
+          <!-- JSで動的に生成 -->
+        </div>
+
+        <!-- ページネーション -->
+        <div id="pagination" class="flex justify-center items-center gap-4 mt-6 pt-4 border-t">
           <!-- JSで動的に生成 -->
         </div>
       </div>
-    </div>
 
-    <!-- 商品一覧 -->
-    <div class="bg-white rounded-lg shadow-md p-4">
-      <div id="productList" class="space-y-4">
-        <!-- JSで動的に生成 -->
-      </div>
-
-      <!-- ページネーション -->
-      <div id="pagination" class="flex justify-center items-center gap-4 mt-6 pt-4 border-t">
-        <!-- JSで動的に生成 -->
-      </div>
-    </div>
-
-  </main>
+    </main>
+  </div>
 
   <!-- 非表示リストモーダル -->
-  <div id="hiddenModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-30 flex items-center justify-center">
+  <div id="hiddenModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-40 flex items-center justify-center">
     <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[80vh] overflow-hidden">
       <div class="p-4 border-b flex justify-between items-center">
         <h2 class="text-lg font-bold">🚫 非表示にした取引先</h2>
@@ -121,6 +181,40 @@
   </div>
 
   <script type="module" src="/src/main.js"></script>
+
+  <!-- サイドメニュー開閉スクリプト -->
+  <script>
+    const sidebar = document.getElementById('sidebar')
+    const mainContent = document.getElementById('mainContent')
+    const toggleBtn = document.getElementById('toggleBtn')
+    const toggleIcon = document.getElementById('toggleIcon')
+    const logoText = document.getElementById('logoText')
+    const menuTexts = document.querySelectorAll('.menu-text')
+
+    let isOpen = true
+
+    toggleBtn.addEventListener('click', () => {
+      isOpen = !isOpen
+
+      if (isOpen) {
+        sidebar.classList.remove('w-16')
+        sidebar.classList.add('w-56')
+        mainContent.classList.remove('ml-16')
+        mainContent.classList.add('ml-56')
+        toggleIcon.classList.remove('rotate-180')
+        logoText.classList.remove('hidden')
+        menuTexts.forEach(el => el.classList.remove('hidden'))
+      } else {
+        sidebar.classList.remove('w-56')
+        sidebar.classList.add('w-16')
+        mainContent.classList.remove('ml-56')
+        mainContent.classList.add('ml-16')
+        toggleIcon.classList.add('rotate-180')
+        logoText.classList.add('hidden')
+        menuTexts.forEach(el => el.classList.add('hidden'))
+      }
+    })
+  </script>
 </body>
 
 </html>

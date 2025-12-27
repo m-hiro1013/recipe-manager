@@ -19,6 +19,8 @@ const hiddenModal = document.getElementById('hiddenModal')
 const closeHiddenModal = document.getElementById('closeHiddenModal')
 const hiddenList = document.getElementById('hiddenList')
 const hiddenCount = document.getElementById('hiddenCount')
+const detailViewBtn = document.getElementById('detailViewBtn') // ← 追加！
+const compactViewBtn = document.getElementById('compactViewBtn') // ← 追加！
 
 // ============================================
 // 状態管理
@@ -27,9 +29,11 @@ let allProducts = []
 let allSuppliers = []
 let selectedSuppliers = new Set()
 let searchQuery = ''
-let activeFilter = 'off' // 'off', 'on', 'all'
+let activeFilter = 'all' // 'off', 'on', 'all' ← 'off' を 'all' に変更！
 let currentPage = 1
 const perPage = 100
+let viewMode = 'detail' // 'detail', 'compact' ← これ追加！
+let expandedSupplier = null // コンパクト表示で展開中の業者名 ← これ追加！
 
 // ============================================
 // 初期化
@@ -44,17 +48,38 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadData() {
   productList.innerHTML = '<p class="text-center text-gray-500 py-8">読み込み中...</p>'
 
-  // 商品データ取得
-  const { data: products, error: productsError } = await supabase
-    .from('products')
-    .select('*')
-    .order('supplier_name', { ascending: true })
+  // 商品データ取得（ページングで全件取得）
+  let allProductsData = []
+  let from = 0
+  const batchSize = 1000
 
-  if (productsError) {
-    console.error('商品データ取得エラー:', productsError)
-    productList.innerHTML = '<p class="text-center text-red-500 py-8">データの取得に失敗しました</p>'
-    return
+  while (true) {
+    const { data: products, error: productsError } = await supabase
+      .from('products')
+      .select('*')
+      .order('supplier_name', { ascending: true })
+      .range(from, from + batchSize - 1)
+
+    if (productsError) {
+      console.error('商品データ取得エラー:', productsError)
+      productList.innerHTML = '<p class="text-center text-red-500 py-8">データの取得に失敗しました</p>'
+      return
+    }
+
+    allProductsData = allProductsData.concat(products)
+
+    // 取得件数がbatchSize未満なら最後のページ
+    if (products.length < batchSize) {
+      break
+    }
+
+    from += batchSize
   }
+
+  // ★★★ デバッグ用ログ（確認後に消してOK） ★★★
+  console.log('=== 全体確認 ===')
+  console.log('取得した商品数:', allProductsData.length)
+  // ★★★ ここまで ★★★
 
   // 取引先データ取得
   const { data: suppliers, error: suppliersError } = await supabase
@@ -67,7 +92,7 @@ async function loadData() {
     return
   }
 
-  allProducts = products
+  allProducts = allProductsData
   allSuppliers = suppliers
 
   // 表示中の取引先を選択（非表示でないもの）
@@ -158,9 +183,118 @@ function renderProducts() {
     }
   }
 
-
   // 五十音順でソート
   const sortedSuppliers = Object.keys(grouped).sort((a, b) => a.localeCompare(b, 'ja'))
+
+  // コンパクト表示の場合はページネーションなし
+  if (viewMode === 'compact') {
+    let html = ''
+
+    for (const supplier of sortedSuppliers) {
+      const products = grouped[supplier]
+      const isExpanded = expandedSupplier === supplier
+
+      html += `
+        <div class="border-l-4 border-blue-500 pl-4 mb-2">
+          <div class="flex flex-wrap items-center gap-2 py-2">
+            <h3 class="text-lg font-bold text-blue-700 cursor-pointer hover:text-blue-900 supplier-toggle" data-supplier="${supplier}">
+              ${isExpanded ? '▼' : '▶'} ${supplier}
+              <span class="text-sm font-normal text-gray-500">(${products.length}件)</span>
+            </h3>
+            <button 
+              data-supplier="${supplier}" 
+              data-action="on"
+              class="supplier-bulk-btn text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200"
+            >全てON</button>
+            <button 
+              data-supplier="${supplier}" 
+              data-action="off"
+              class="supplier-bulk-btn text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"
+            >全てOFF</button>
+            <button 
+              data-supplier="${supplier}" 
+              class="supplier-hide-btn text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200"
+            >非表示</button>
+          </div>
+      `
+
+      // 展開中の業者だけ商品リストを表示
+      if (isExpanded && products.length > 0) {
+        html += `<div class="space-y-1 mt-2">`
+        for (const product of products) {
+          html += `
+            <div class="flex items-center gap-4 p-2 rounded-lg hover:bg-blue-50 transition-colors ${product.is_active ? 'bg-green-50' : ''} border-b border-gray-100">
+              <input 
+                type="checkbox" 
+                ${product.is_active ? 'checked' : ''}
+                data-product-code="${product.product_code}"
+                class="active-checkbox w-5 h-5 text-green-600 rounded border-2 border-gray-300 focus:ring-green-500 flex-shrink-0"
+              />
+              <div class="flex-1 min-w-0 flex items-center gap-2">
+                <span class="font-medium text-gray-800 truncate">${product.product_name}</span>
+                <span class="text-gray-400">/</span>
+                <span class="text-sm text-gray-500 truncate">${product.specification || '-'}</span>
+              </div>
+              <div class="font-bold text-gray-700 whitespace-nowrap flex-shrink-0">
+                ¥${(product.unit_price || 0).toLocaleString()}
+              </div>
+            </div>
+          `
+        }
+        html += `</div>`
+      } else if (isExpanded && products.length === 0) {
+        html += `<p class="text-gray-400 text-sm py-2 mt-2">該当する商品がありません</p>`
+      }
+
+      html += `</div>`
+    }
+
+    if (html === '') {
+      html = '<p class="text-center text-gray-500 py-8">該当する取引先がありません</p>'
+    }
+
+    productList.innerHTML = html
+    pagination.innerHTML = ''
+
+    // 業者名クリックで展開/閉じる
+    document.querySelectorAll('.supplier-toggle').forEach(el => {
+      el.addEventListener('click', (e) => {
+        const supplier = e.currentTarget.dataset.supplier
+        expandedSupplier = expandedSupplier === supplier ? null : supplier
+        renderProducts()
+      })
+    })
+
+    // 使用フラグのチェックボックスイベント
+    document.querySelectorAll('.active-checkbox').forEach(checkbox => {
+      checkbox.addEventListener('change', async (e) => {
+        const productCode = e.target.dataset.productCode
+        const isActive = e.target.checked
+        await updateActiveFlag(productCode, isActive)
+      })
+    })
+
+    // 業者一括ON/OFFボタンイベント
+    document.querySelectorAll('.supplier-bulk-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const supplier = e.target.dataset.supplier
+        const action = e.target.dataset.action
+        await bulkUpdateSupplierProducts(supplier, action === 'on')
+      })
+    })
+
+    // 業者非表示ボタンイベント
+    document.querySelectorAll('.supplier-hide-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const supplier = e.target.dataset.supplier
+        await hideSupplier(supplier)
+      })
+    })
+
+    return
+  }
+
+  // ========== 詳細表示（従来の処理） ==========
 
   // 全商品数（ページネーション用）
   let totalItems = 0
@@ -517,11 +651,25 @@ closeHiddenModal.addEventListener('click', () => {
   hiddenModal.classList.add('hidden')
 })
 
-// モーダル外クリックで閉じる
-hiddenModal.addEventListener('click', (e) => {
-  if (e.target === hiddenModal) {
-    hiddenModal.classList.add('hidden')
-  }
+
+
+// 表示モード切り替え
+detailViewBtn.addEventListener('click', () => {
+  viewMode = 'detail'
+  detailViewBtn.classList.add('bg-blue-600', 'text-white')
+  detailViewBtn.classList.remove('bg-white', 'text-gray-700', 'hover:bg-gray-50')
+  compactViewBtn.classList.remove('bg-blue-600', 'text-white')
+  compactViewBtn.classList.add('bg-white', 'text-gray-700', 'hover:bg-gray-50')
+  renderProducts()
+})
+
+compactViewBtn.addEventListener('click', () => {
+  viewMode = 'compact'
+  compactViewBtn.classList.add('bg-blue-600', 'text-white')
+  compactViewBtn.classList.remove('bg-white', 'text-gray-700', 'hover:bg-gray-50')
+  detailViewBtn.classList.remove('bg-blue-600', 'text-white')
+  detailViewBtn.classList.add('bg-white', 'text-gray-700', 'hover:bg-gray-50')
+  renderProducts()
 })
 
 // ============================================
@@ -635,6 +783,7 @@ importBtn.addEventListener('click', async () => {
     importBtn.disabled = false
     importBtn.textContent = 'インポート実行'
   }
+
 })
 
 // ============================================

@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>マスタ管理 | レシピ管理システム</title>
+    <link rel="stylesheet" href="/src/style.css" />
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+
+    <!-- サイドメニュー -->
+    <aside id="sidebar"
+        class="fixed top-0 left-0 h-screen bg-gray-800 text-white flex flex-col z-30 transition-all duration-300 w-56">
+        <!-- ロゴ部分 -->
+        <div class="p-4 border-b border-gray-700 flex items-center justify-between">
+            <h1 id="logoText" class="text-lg font-bold whitespace-nowrap overflow-hidden">🍳 レシピ管理</h1>
+            <button id="toggleBtn" class="text-gray-400 hover:text-white p-1">
+                <svg id="toggleIcon" class="w-6 h-6 transition-transform duration-300" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                </svg>
+            </button>
+        </div>
+        <!-- メニュー -->
+        <nav class="flex-1 p-4">
+            <ul class="space-y-2">
+                <li>
+                    <a href="/import.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="インポート">
+                        <span class="flex-shrink-0">📥</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">インポート</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="仕入れ商品">
+                        <span class="flex-shrink-0">📦</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">仕入れ商品</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/items.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="アイテム">
+                        <span class="flex-shrink-0">🧩</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">アイテム</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/preparations.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="仕込み品">
+                        <span class="flex-shrink-0">🍳</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">仕込み品</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dishes.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="商品">
+                        <span class="flex-shrink-0">🍽️</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">商品</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/courses.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="コース">
+                        <span class="flex-shrink-0">📜</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">コース</span>
+                    </a>
+                </li>
+                <li class="pt-4 border-t border-gray-700 mt-4">
+                    <a href="/master.html" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-600 text-white"
+                        title="マスタ管理">
+                        <span class="flex-shrink-0">⚙️</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">マスタ管理</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- メインコンテンツ -->
+    <div id="mainContent" class="transition-all duration-300 ml-56">
+        <!-- ヘッダー -->
+        <header class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-20">
+            <div class="max-w-4xl mx-auto">
+                <h2 class="text-xl font-bold">⚙️ マスタ管理</h2>
+            </div>
+        </header>
+
+        <!-- メインコンテンツ -->
+        <main class="max-w-4xl mx-auto p-6 space-y-6">
+
+            <!-- アイテムジャンル -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">🧩 アイテムジャンル</h3>
+                    <button id="addGenreBtn"
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                        ＋ 追加
+                    </button>
+                </div>
+                <div id="genreList" class="space-y-2">
+                    <!-- JSで動的に生成 -->
+                </div>
+            </div>
+
+            <!-- 仕込み品セクション -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">🍳 仕込み品セクション</h3>
+                    <button id="addPrepSectionBtn"
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                        ＋ 追加
+                    </button>
+                </div>
+                <div id="prepSectionList" class="space-y-2">
+                    <!-- JSで動的に生成 -->
+                </div>
+            </div>
+
+            <!-- 商品セクション -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">🍽️ 商品セクション</h3>
+                    <button id="addDishSectionBtn"
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                        ＋ 追加
+                    </button>
+                </div>
+                <div id="dishSectionList" class="space-y-2">
+                    <!-- JSで動的に生成 -->
+                </div>
+            </div>
+            <!-- 業態 -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">🏪 業態</h3>
+                    <button id="addBusinessTypeBtn"
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                        ＋ 追加
+                    </button>
+                </div>
+                <div id="businessTypeList" class="space-y-2">
+                    <!-- JSで動的に生成 -->
+                </div>
+            </div>
+
+            <!-- システム設定 -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center gap-2 mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">💰 システム設定</h3>
+                    <span class="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-bold">共通</span>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-3 border rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <span class="text-gray-600">消費税率</span>
+                            <span
+                                class="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-bold">共通</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="number" id="taxRateInput"
+                                class="w-20 p-2 border-2 border-gray-200 rounded-lg text-center focus:outline-none focus:border-blue-500"
+                                min="0" max="100" step="0.1" />
+                            <span class="text-gray-600">%</span>
+                            <button id="saveTaxRateBtn"
+                                class="ml-4 bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                                保存
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ===== ジャンル追加/編集モーダル ===== -->
+    <div id="genreModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-40 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 id="genreModalTitle" class="text-lg font-bold">🧩 ジャンル追加</h2>
+                <button id="closeGenreModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div class="p-6">
+                <input type="hidden" id="genreId" />
+
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        ジャンル名 <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="genreName" placeholder="例：肉類"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        表示順
+                    </label>
+                    <input type="number" id="genreSortOrder" placeholder="例：1" min="0"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                </div>
+
+                <div class="flex gap-4">
+                    <button id="cancelGenre"
+                        class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                        キャンセル
+                    </button>
+                    <button id="submitGenre"
+                        class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                        保存
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 仕込み品セクション追加/編集モーダル ===== -->
+    <div id="prepSectionModal"
+        class="fixed inset-0 bg-black bg-opacity-50 hidden z-40 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 id="prepSectionModalTitle" class="text-lg font-bold">🍳 セクション追加</h2>
+                <button id="closePrepSectionModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div class="p-6">
+                <input type="hidden" id="prepSectionId" />
+
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        セクション名 <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="prepSectionName" placeholder="例：アペタイザー"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        表示順
+                    </label>
+                    <input type="number" id="prepSectionSortOrder" placeholder="例：1" min="0"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                </div>
+
+                <div class="flex gap-4">
+                    <button id="cancelPrepSection"
+                        class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                        キャンセル
+                    </button>
+                    <button id="submitPrepSection"
+                        class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                        保存
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 商品セクション追加/編集モーダル ===== -->
+    <div id="dishSectionModal"
+        class="fixed inset-0 bg-black bg-opacity-50 hidden z-40 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 id="dishSectionModalTitle" class="text-lg font-bold">🍽️ セクション追加</h2>
+                <button id="closeDishSectionModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div class="p-6">
+                <input type="hidden" id="dishSectionId" />
+
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        セクション名 <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="dishSectionName" placeholder="例：前菜"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        表示順
+                    </label>
+                    <input type="number" id="dishSectionSortOrder" placeholder="例：1" min="0"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                </div>
+
+                <div class="flex gap-4">
+                    <button id="cancelDishSection"
+                        class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                        キャンセル
+                    </button>
+                    <button id="submitDishSection"
+                        class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                        保存
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 業態追加/編集モーダル ===== -->
+    <div id="businessTypeModal"
+        class="fixed inset-0 bg-black bg-opacity-50 hidden z-40 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 id="businessTypeModalTitle" class="text-lg font-bold">🏪 業態追加</h2>
+                <button id="closeBusinessTypeModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div class="p-6">
+                <input type="hidden" id="businessTypeId" />
+
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        業態名 <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="businessTypeName" placeholder="例：イタリアン"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        表示順
+                    </label>
+                    <input type="number" id="businessTypeSortOrder" placeholder="例：1" min="0"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                </div>
+
+                <div class="flex gap-4">
+                    <button id="cancelBusinessType"
+                        class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                        キャンセル
+                    </button>
+                    <button id="submitBusinessType"
+                        class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                        保存
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/master.js"></script>
+
+    <!-- サイドメニュー開閉スクリプト -->
+    <script>
+        const sidebar = document.getElementById('sidebar')
+        const mainContent = document.getElementById('mainContent')
+        const toggleBtn = document.getElementById('toggleBtn')
+        const toggleIcon = document.getElementById('toggleIcon')
+        const logoText = document.getElementById('logoText')
+        const menuTexts = document.querySelectorAll('.menu-text')
+
+        let isOpen = true
+
+        toggleBtn.addEventListener('click', () => {
+            isOpen = !isOpen
+
+            if (isOpen) {
+                sidebar.classList.remove('w-16')
+                sidebar.classList.add('w-56')
+                mainContent.classList.remove('ml-16')
+                mainContent.classList.add('ml-56')
+                toggleIcon.classList.remove('rotate-180')
+                logoText.classList.remove('hidden')
+                menuTexts.forEach(el => el.classList.remove('hidden'))
+            } else {
+                sidebar.classList.remove('w-56')
+                sidebar.classList.add('w-16')
+                mainContent.classList.remove('ml-56')
+                mainContent.classList.add('ml-16')
+                toggleIcon.classList.add('rotate-180')
+                logoText.classList.add('hidden')
+                menuTexts.forEach(el => el.classList.add('hidden'))
+            }
+        })
+    </script>
+</body>
+
+</html>

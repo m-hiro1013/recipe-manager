@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>コース | レシピ管理システム</title>
+    <link rel="stylesheet" href="/src/style.css" />
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+
+    <!-- サイドメニュー -->
+    <aside id="sidebar"
+        class="fixed top-0 left-0 h-screen bg-gray-800 text-white flex flex-col z-30 transition-all duration-300 w-56">
+        <!-- ロゴ部分 -->
+        <div class="p-4 border-b border-gray-700 flex items-center justify-between">
+            <h1 id="logoText" class="text-lg font-bold whitespace-nowrap overflow-hidden">🍳 レシピ管理</h1>
+            <button id="toggleBtn" class="text-gray-400 hover:text-white p-1">
+                <svg id="toggleIcon" class="w-6 h-6 transition-transform duration-300" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                </svg>
+            </button>
+        </div>
+        <!-- メニュー -->
+        <nav class="flex-1 p-4">
+            <ul class="space-y-2">
+                <li>
+                    <a href="/import.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="インポート">
+                        <span class="flex-shrink-0">📥</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">インポート</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="仕入れ商品">
+                        <span class="flex-shrink-0">📦</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">仕入れ商品</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/items.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="アイテム">
+                        <span class="flex-shrink-0">🧩</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">アイテム</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/preparations.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="仕込み品">
+                        <span class="flex-shrink-0">🍳</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">仕込み品</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dishes.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="商品">
+                        <span class="flex-shrink-0">🍽️</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">商品</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/courses.html" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-600 text-white"
+                        title="コース">
+                        <span class="flex-shrink-0">📜</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">コース</span>
+                    </a>
+                </li>
+                <li class="pt-4 border-t border-gray-700 mt-4">
+                    <a href="/master.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="マスタ管理">
+                        <span class="flex-shrink-0">⚙️</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">マスタ管理</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- メインコンテンツ -->
+    <div id="mainContent" class="transition-all duration-300 ml-56">
+        <!-- ヘッダー -->
+        <header class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-20">
+            <div class="max-w-6xl mx-auto flex justify-between items-center">
+                <h2 class="text-xl font-bold">📜 コース一覧</h2>
+                <button id="openCreateModal"
+                    class="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-50 transition-colors">
+                    ＋ 新規作成
+                </button>
+            </div>
+        </header>
+
+        <!-- メインコンテンツ -->
+        <main class="max-w-6xl mx-auto p-4 space-y-4">
+
+            <!-- 統計情報 -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white rounded-lg shadow-md p-4">
+                    <p class="text-sm text-gray-500 mb-1">登録コース数</p>
+                    <p id="courseCount" class="text-2xl font-bold text-gray-800">---</p>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-4">
+                    <p class="text-sm text-gray-500 mb-1">利用可能な商品</p>
+                    <p id="dishCount" class="text-2xl font-bold text-green-600">---</p>
+                </div>
+            </div>
+
+            <!-- 検索・フィルター -->
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <input type="text" id="searchInput" placeholder="🔍 コース名・読み仮名で検索..."
+                    class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-lg mb-3" />
+                <div class="flex items-center gap-4">
+                    <span class="text-sm text-gray-600">表示:</span>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="reviewFilter" value="all" checked class="review-filter-radio" />
+                        <span class="text-sm">すべて</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="reviewFilter" value="has_review_dish" class="review-filter-radio" />
+                        <span class="text-sm text-orange-600 font-bold">商品に要確認あり</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- コース一覧 -->
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <div id="courseList" class="space-y-2">
+                    <!-- JSで動的に生成 -->
+                </div>
+
+                <!-- 空の場合 -->
+                <div id="emptyState" class="hidden text-center py-12">
+                    <p class="text-4xl mb-4">📜</p>
+                    <p class="text-gray-500 mb-4">コースがまだ登録されていません</p>
+                    <p class="text-sm text-gray-400">「新規作成」ボタンから、コースを登録しましょう</p>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ===== コース作成モーダル ===== -->
+    <div id="createModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-40 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 class="text-lg font-bold">📜 コース新規作成</h2>
+                <button id="closeCreateModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[70vh]">
+
+                <!-- コース名 -->
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        コース名 <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="courseName" placeholder="例：5000円コース"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                </div>
+
+                <!-- 読み仮名 -->
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        読み仮名 <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="courseKana" placeholder="例：ゴセンエンコース"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                    <p class="mt-1 text-sm text-gray-500">ひらがな・カタカナで入力（自動で全角カタカナに変換）</p>
+                </div>
+
+                <!-- 売価（税込） -->
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        売価（税込） <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-500">¥</span>
+                        <input type="number" id="courseSellingPrice" placeholder="例：5000"
+                            class="flex-1 p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                    </div>
+                    <p id="taxExcludedPreview" class="mt-1 text-sm text-gray-500"></p>
+                </div>
+                <!-- 実施中フラグ -->
+                <div class="mb-6">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="courseIsActive" checked class="w-5 h-5 text-blue-600 rounded" />
+                        <span class="font-bold text-gray-700">実施中</span>
+                    </label>
+                    <p class="mt-1 text-sm text-gray-500 ml-8">チェックを外すと「未実施コース」に表示されます</p>
+                </div>
+                <!-- 商品リスト -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-bold text-gray-700">
+                            商品 <span class="text-red-500">*</span>
+                        </label>
+                        <button type="button" id="openDishModal"
+                            class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200">
+                            ＋ 商品を追加
+                        </button>
+                    </div>
+                    <div id="courseItemList" class="border-2 border-gray-200 rounded-lg p-4 min-h-[100px]">
+                        <p id="noItemText" class="text-gray-400 text-center py-4">商品がまだ追加されていません</p>
+                    </div>
+                </div>
+
+                <!-- 原価・原価率プレビュー -->
+                <div class="bg-blue-50 rounded-lg p-4 mb-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">原価合計（自動計算）</p>
+                            <p id="totalCostPreview" class="text-2xl font-bold text-blue-600">¥0</p>
+                        </div>
+                        <div class="text-right">
+                            <p id="costRatePreview" class="text-lg font-bold text-gray-600">原価率: --%</p>
+                            <p class="text-xs text-gray-400">※税抜換算で計算</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ボタン -->
+                <div class="flex gap-4">
+                    <button id="cancelCreate"
+                        class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                        キャンセル
+                    </button>
+                    <button id="submitCreate"
+                        class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                        作成する
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 商品選択モーダル ===== -->
+    <div id="dishModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl flex flex-col" style="width: 80%; height: 85vh;">
+            <div class="p-4 border-b flex justify-between items-center flex-shrink-0">
+                <h2 class="text-lg font-bold">🍽️ 商品を選択</h2>
+                <button id="closeDishModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+
+            <!-- 検索 -->
+            <div class="p-4 border-b flex-shrink-0">
+                <input type="text" id="dishSearchInput" placeholder="🔍 商品名・読み仮名で検索..."
+                    class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+            </div>
+
+            <!-- 商品リスト -->
+            <div id="dishSelectList" class="flex-1 overflow-y-auto p-4" style="min-height: 0;">
+                <!-- JSで動的に生成 -->
+            </div>
+
+            <!-- 選択状況とボタン -->
+            <div class="p-4 border-t flex justify-between items-center flex-shrink-0">
+                <span id="selectedDishCount" class="text-sm text-gray-600">選択中: 0件</span>
+                <button id="addSelectedDishes"
+                    class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    disabled>
+                    選択した商品を追加
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== コース編集モーダル ===== -->
+    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-40 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 class="text-lg font-bold">📜 コース編集</h2>
+                <button id="closeEditModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[70vh]">
+                <input type="hidden" id="editCourseId" />
+
+                <!-- コース名 -->
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        コース名 <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="editCourseName"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                </div>
+
+                <!-- 読み仮名 -->
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        読み仮名 <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="editCourseKana"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                    <p class="mt-1 text-sm text-gray-500">ひらがな・カタカナで入力（自動で全角カタカナに変換）</p>
+                </div>
+
+                <!-- 売価（税込） -->
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        売価（税込） <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-500">¥</span>
+                        <input type="number" id="editCourseSellingPrice"
+                            class="flex-1 p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                    </div>
+                    <p id="editTaxExcludedPreview" class="mt-1 text-sm text-gray-500"></p>
+                </div>
+                <!-- 実施中フラグ -->
+                <div class="mb-6">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="editCourseIsActive" class="w-5 h-5 text-blue-600 rounded" />
+                        <span class="font-bold text-gray-700">実施中</span>
+                    </label>
+                    <p class="mt-1 text-sm text-gray-500 ml-8">チェックを外すと「未実施コース」に表示されます</p>
+                </div>
+                <!-- 商品リスト -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-bold text-gray-700">
+                            商品 <span class="text-red-500">*</span>
+                        </label>
+                        <button type="button" id="openEditDishModal"
+                            class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200">
+                            ＋ 商品を追加
+                        </button>
+                    </div>
+                    <div id="editCourseItemList" class="border-2 border-gray-200 rounded-lg p-4 min-h-[100px]">
+                        <p id="editNoItemText" class="text-gray-400 text-center py-4">商品がまだ追加されていません</p>
+                    </div>
+                </div>
+
+                <!-- 原価・原価率プレビュー -->
+                <div class="bg-blue-50 rounded-lg p-4 mb-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">原価合計（自動計算）</p>
+                            <p id="editTotalCostPreview" class="text-2xl font-bold text-blue-600">¥0</p>
+                        </div>
+                        <div class="text-right">
+                            <p id="editCostRatePreview" class="text-lg font-bold text-gray-600">原価率: --%</p>
+                            <p class="text-xs text-gray-400">※税抜換算で計算</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ボタン -->
+                <div class="flex gap-4">
+                    <button id="deleteCourse"
+                        class="px-6 py-3 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition-colors">
+                        削除
+                    </button>
+                    <button id="cancelEdit"
+                        class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                        キャンセル
+                    </button>
+                    <button id="submitEdit"
+                        class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                        更新する
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/courses.js"></script>
+
+    <!-- サイドメニュー開閉スクリプト -->
+    <script>
+        const sidebar = document.getElementById('sidebar')
+        const mainContent = document.getElementById('mainContent')
+        const toggleBtn = document.getElementById('toggleBtn')
+        const toggleIcon = document.getElementById('toggleIcon')
+        const logoText = document.getElementById('logoText')
+        const menuTexts = document.querySelectorAll('.menu-text')
+
+        let isOpen = true
+
+        toggleBtn.addEventListener('click', () => {
+            isOpen = !isOpen
+
+            if (isOpen) {
+                sidebar.classList.remove('w-16')
+                sidebar.classList.add('w-56')
+                mainContent.classList.remove('ml-16')
+                mainContent.classList.add('ml-56')
+                toggleIcon.classList.remove('rotate-180')
+                logoText.classList.remove('hidden')
+                menuTexts.forEach(el => el.classList.remove('hidden'))
+            } else {
+                sidebar.classList.remove('w-56')
+                sidebar.classList.add('w-16')
+                mainContent.classList.remove('ml-56')
+                mainContent.classList.add('ml-16')
+                toggleIcon.classList.add('rotate-180')
+                logoText.classList.add('hidden')
+                menuTexts.forEach(el => el.classList.add('hidden'))
+            }
+        })
+    </script>
+</body>
+
+</html>

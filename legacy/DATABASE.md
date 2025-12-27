@@ -10,7 +10,7 @@
 | 項目 | 値 |
 |------|-----|
 | データベース | Supabase (PostgreSQL) |
-| 最終更新日 | 2025-12-27 |
+| 最終更新日 | 2025-12-25 |
 | 更新者 | ひろきくん |
 
 ---
@@ -29,10 +29,6 @@
 | dishes | 商品（最終メニュー） | ❌ |
 | dish_ingredients | 商品の材料 | ❌ |
 | dish_sections | 商品セクション | ❌ |
-| courses | コース | ❌ |
-| course_items | コースの商品 | ❌ |
-| business_types | 業態 | ❌ |
-| settings | システム設定 | ❌ |
 
 ---
 
@@ -60,7 +56,6 @@
 **備考**:
 - CSVインポート時、既存の商品コードがあれば単価のみ更新
 - is_active=true の商品がアイテム化の対象
-- 全業態で共通（business_type_idなし）
 
 ---
 
@@ -82,7 +77,6 @@
 **備考**:
 - CSVインポート時に自動で登録される
 - is_hidden=true の業者は一覧画面に表示されない
-- 全業態で共通（business_type_idなし）
 
 ---
 
@@ -99,8 +93,7 @@
 | genre_id | INTEGER | FK → item_genres(genre_id) | ジャンルへの参照 |
 | unit | TEXT | NOT NULL | 使用単位 |
 | yield_quantity | NUMERIC | NOT NULL | 取れる数 |
-| needs_review | BOOLEAN | NOT NULL, DEFAULT false | 要確認フラグ |
-| business_type_id | INTEGER | FK → business_types(business_type_id) | 業態への参照 |
+| unit_cost | NUMERIC | | 単位原価（自動計算） |
 | created_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 作成日時 |
 | updated_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 更新日時 |
 
@@ -109,11 +102,9 @@
 **インデックス**: なし
 
 **備考**:
-- 単位原価は表示時に計算（仕入れ単価 ÷ 取れる数）
+- unit_cost = 仕入れ単価 ÷ 取れる数
 - アイテム : 仕入れ商品 = 1 : 1 の関係
 - genre_idはNULL許容（未分類の場合）
-- business_type_idはNULL許容（未分類の場合）
-- needs_review=true は「仮の数値で登録、後で確認が必要」を示す
 
 ---
 
@@ -126,7 +117,6 @@
 | genre_id | SERIAL | PK | 主キー（自動採番） |
 | genre_name | TEXT | NOT NULL | ジャンル名 |
 | sort_order | INTEGER | NOT NULL, DEFAULT 0 | 表示順 |
-| business_type_id | INTEGER | FK → business_types(business_type_id) | 業態への参照 |
 | created_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 作成日時 |
 | updated_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 更新日時 |
 
@@ -137,7 +127,6 @@
 **備考**:
 - マスタ管理画面から追加・編集・削除可能
 - 初期データ：肉類、海鮮類、野菜・青果、調味料・香辛料、穀物・粉類、その他
-- business_type_idはNULL許容（未分類の場合）
 
 ---
 
@@ -153,8 +142,7 @@
 | section_id | INTEGER | FK → preparation_sections(section_id) | セクションへの参照 |
 | yield_quantity | NUMERIC | NOT NULL | 仕上がり量 |
 | yield_unit | TEXT | NOT NULL | 仕上がり単位 |
-| needs_review | BOOLEAN | NOT NULL, DEFAULT false | 要確認フラグ |
-| business_type_id | INTEGER | FK → business_types(business_type_id) | 業態への参照 |
+| cost | NUMERIC | | 原価（自動計算） |
 | created_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 作成日時 |
 | updated_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 更新日時 |
 
@@ -163,12 +151,9 @@
 **インデックス**: なし
 
 **備考**:
-- 原価は表示時に計算（材料の単位原価 × 使用量の合計）
 - 仕込み品は他の仕込み品を材料にできる（再帰的構造）
 - preparation_kanaは五十音ソート・検索用（半角カタカナで保存）
 - section_idはNULL許容（未分類の場合）
-- business_type_idはNULL許容（未分類の場合）
-- needs_review=true は「仮の数値で登録、後で確認が必要」を示す
 
 ---
 
@@ -204,7 +189,6 @@
 | section_id | SERIAL | PK | 主キー（自動採番） |
 | section_name | TEXT | NOT NULL | セクション名 |
 | sort_order | INTEGER | NOT NULL, DEFAULT 0 | 表示順 |
-| business_type_id | INTEGER | FK → business_types(business_type_id) | 業態への参照 |
 | created_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 作成日時 |
 | updated_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 更新日時 |
 
@@ -215,7 +199,6 @@
 **備考**:
 - マスタ管理画面から追加・編集・削除可能
 - 初期データ：アペタイザー、ファイヤー、その他
-- business_type_idはNULL許容（未分類の場合）
 
 ---
 
@@ -229,8 +212,7 @@
 | dish_name | TEXT | NOT NULL | 商品名 |
 | dish_kana | TEXT | | 読み仮名（半角カタカナ） |
 | section_id | INTEGER | FK → dish_sections(section_id) | セクションへの参照 |
-| selling_price | NUMERIC | | 売価（税抜） |
-| business_type_id | INTEGER | FK → business_types(business_type_id) | 業態への参照 |
+| cost | NUMERIC | | 原価（自動計算） |
 | created_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 作成日時 |
 | updated_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 更新日時 |
 
@@ -239,14 +221,9 @@
 **インデックス**: なし
 
 **備考**:
-- 原価は表示時に計算（材料の単位原価 × 使用量の合計）
-- 原価率は表示時に計算（原価 ÷ 売価 × 100）
-- 税込価格は表示時に計算（売価 × (1 + 税率/100)）、税率はsettingsテーブルから取得
 - 仕上がりは常に1単位
 - dish_kanaは五十音ソート・検索用（半角カタカナで保存）
 - section_idはNULL許容（未分類の場合）
-- business_type_idはNULL許容（未分類の場合）
-- 商品自体にはneeds_reviewフラグなし（材料の状態で判断）
 
 ---
 
@@ -282,7 +259,6 @@
 | section_id | SERIAL | PK | 主キー（自動採番） |
 | section_name | TEXT | NOT NULL | セクション名 |
 | sort_order | INTEGER | NOT NULL, DEFAULT 0 | 表示順 |
-| business_type_id | INTEGER | FK → business_types(business_type_id) | 業態への参照 |
 | created_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 作成日時 |
 | updated_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 更新日時 |
 
@@ -293,106 +269,6 @@
 **備考**:
 - マスタ管理画面から追加・編集・削除可能
 - 初期データ：前菜、メイン、サイド、デザート、ドリンク
-- business_type_idはNULL許容（未分類の場合）
-
----
-
-### ⑪ courses（コース）
-
-**概要**: コース料理の管理
-
-| カラム名 | 型 | 制約 | 説明 |
-|---------|-----|------|------|
-| course_id | SERIAL | PK | 主キー（自動採番） |
-| course_name | TEXT | NOT NULL | コース名 |
-| course_kana | TEXT | | 読み仮名（全角カタカナ） |
-| selling_price | NUMERIC | | 売価（税込） |
-| is_active | BOOLEAN | NOT NULL, DEFAULT true | 実施中フラグ |
-| sort_order | INTEGER | NOT NULL, DEFAULT 0 | 表示順（未使用、金額順で表示） |
-| business_type_id | INTEGER | FK → business_types(business_type_id) | 業態への参照 |
-| created_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 作成日時 |
-| updated_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 更新日時 |
-
-**RLSポリシー**: なし（フェーズ1は認証なし）
-
-**インデックス**: なし
-
-**備考**:
-- 原価は表示時に計算（course_itemsの商品原価×ポーションの合計）
-- 原価率は税抜換算して計算（税込売価 ÷ (1+税率) で税抜にしてから計算）
-- 一覧は実施中/未実施で分けて、それぞれ金額順で表示
-- business_type_idはNULL許容（未分類の場合）
-- コース自体にはneeds_reviewフラグなし（含まれる商品の状態で判断）
-
----
-
-### ⑫ course_items（コースの商品）
-
-**概要**: コースを構成する商品の中間テーブル
-
-| カラム名 | 型 | 制約 | 説明 |
-|---------|-----|------|------|
-| id | SERIAL | PK | 主キー |
-| course_id | INTEGER | FK → courses(course_id) ON DELETE CASCADE | コースID |
-| dish_id | INTEGER | FK → dishes(dish_id) ON DELETE RESTRICT | 商品ID |
-| portion | NUMERIC | NOT NULL, DEFAULT 1 | ポーション（0.25, 0.5, 1など） |
-| sort_order | INTEGER | NOT NULL, DEFAULT 0 | 表示順 |
-| created_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 作成日時 |
-
-**RLSポリシー**: なし（フェーズ1は認証なし）
-
-**インデックス**: なし
-
-**備考**:
-- portionは商品の何人前かを表す（例：0.5 = ハーフサイズ）
-- 原価計算は「商品の原価 × portion」で算出
-- コース削除時は商品リストも削除（CASCADE）
-- 商品がコースで使われている場合は削除不可（RESTRICT）
-
----
-
-### ⑬ business_types（業態）
-
-**概要**: 業態（ブランド）の管理
-
-| カラム名 | 型 | 制約 | 説明 |
-|---------|-----|------|------|
-| business_type_id | SERIAL | PK | 主キー（自動採番） |
-| business_type_name | TEXT | NOT NULL | 業態名 |
-| sort_order | INTEGER | NOT NULL, DEFAULT 0 | 表示順 |
-| created_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 作成日時 |
-| updated_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 更新日時 |
-
-**RLSポリシー**: なし（フェーズ1は認証なし）
-
-**インデックス**: なし
-
-**備考**:
-- マスタ管理画面から追加・編集・削除可能
-- 初期データ：アジアン、イタリアン
-
----
-
-### ⑭ settings（システム設定）
-
-**概要**: システム全体の設定値を管理（キー・バリュー形式）
-
-| カラム名 | 型 | 制約 | 説明 |
-|---------|-----|------|------|
-| setting_key | TEXT | PK | 設定キー |
-| setting_value | TEXT | NOT NULL | 設定値 |
-| description | TEXT | | 説明（管理用） |
-| created_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 作成日時 |
-| updated_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 更新日時 |
-
-**RLSポリシー**: なし（フェーズ1は認証なし）
-
-**インデックス**: なし
-
-**備考**:
-- キー・バリュー形式で汎用的に設定を保存
-- 初期データ：tax_rate（消費税率 10%）
-- 将来的に他の設定も追加可能
 
 ---
 
@@ -404,25 +280,14 @@
 |--------------|-------------|-------------|-----------|-----------|
 | items | product_code | products | product_code | RESTRICT |
 | items | genre_id | item_genres | genre_id | SET NULL |
-| items | business_type_id | business_types | business_type_id | SET NULL |
 | preparation_ingredients | preparation_id | preparations | preparation_id | CASCADE |
 | preparations | section_id | preparation_sections | section_id | SET NULL |
-| preparations | business_type_id | business_types | business_type_id | SET NULL |
 | dish_ingredients | dish_id | dishes | dish_id | CASCADE |
 | dishes | section_id | dish_sections | section_id | SET NULL |
-| dishes | business_type_id | business_types | business_type_id | SET NULL |
-| course_items | course_id | courses | course_id | CASCADE |
-| course_items | dish_id | dishes | dish_id | RESTRICT |
-| courses | business_type_id | business_types | business_type_id | SET NULL |
-| item_genres | business_type_id | business_types | business_type_id | SET NULL |
-| preparation_sections | business_type_id | business_types | business_type_id | SET NULL |
-| dish_sections | business_type_id | business_types | business_type_id | SET NULL |
 
 ### リレーション図
 
-business_types ─────────────────────────────────────────────────┐ (業態) │ │ business_type_id │ ├──────────────────┬──────────────────┬───────────────────┤ ▼ ▼ ▼ ▼ item_genres preparation_sections dish_sections courses (ジャンル) (仕込み品セクション) (商品セクション) (コース) │ │ │ │ │ genre_id │ section_id │ section_id │ course_id ▼ ▼ ▼ ▼ suppliers products ──────► items ◄──── preparations ──► dishes ◄── course_items (取引先) (仕入れ商品) (アイテム) (仕込み品) (商品) (コース商品) │ │ │ │ product_code │ │ ▼ ▼ ▼ preparation_ dish_ ingredients ingredients (仕込み品材料) (商品材料)
-
-settings (システム設定)
+item_genres preparation_sections dish_sections (ジャンル) (仕込み品セクション) (商品セクション) │ │ │ │ genre_id │ section_id │ section_id ▼ ▼ ▼ suppliers products ──────► items ◄──── preparations ──► dishes (取引先) (仕入れ商品) (アイテム) (仕込み品) (商品) │ │ │ │ │ │ supplier_name │ product_code │ │ │ ▼ ▼ ▼ ▼ ▼ preparation_ dish_ ingredients ingredients (仕込み品材料) (商品材料)
 
 
 ---
@@ -471,14 +336,6 @@ settings (システム設定)
 | 2025-12-24 | preparationsテーブルにsection_idカラム追加 | セクション機能対応 |
 | 2025-12-25 | dish_sectionsテーブル追加 | 商品のセクション分類機能 |
 | 2025-12-25 | dishesテーブルにsection_id, dish_kanaカラム追加 | セクション機能・五十音ソート対応 |
-| 2025-12-25 | items.unit_cost, preparations.cost, dishes.cost列を削除 | 正規化対応（原価は表示時に計算） |
-| 2025-12-25 | business_typesテーブル追加 | 業態展開対応 |
-| 2025-12-25 | items, item_genres, preparations, preparation_sections, dishes, dish_sectionsにbusiness_type_id追加 | 業態展開対応 |
-| 2025-12-26 | settingsテーブル追加 | 税率など共通設定の管理用 |
-| 2025-12-26 | dishesテーブルにselling_price追加 | 売価・原価率機能対応 |
-| 2025-12-27 | courses, course_itemsテーブル追加 | コース機能 |
-| 2025-12-27 | coursesテーブルにis_active追加 | 実施中/未実施の切り替え機能 |
-| 2025-12-27 | items, preparationsテーブルにneeds_review追加 | 要確認フラグ機能 |
 
 ---
 
@@ -488,10 +345,3 @@ settings (システム設定)
 - フェーズ2で複数ユーザー対応時にRLS有効化予定
 - テーブルにuser_id列は用意済み想定で拡張しやすく設計
 - CSVインポート時、同じ商品コードが複数ある場合は更新日が新しい方を採用
-- **原価計算は正規化対応済み、costCalculator.jsの共通関数で表示時に計算**
-- **仕入れ商品（products）と取引先（suppliers）は全業態で共通**
-- **それ以外のテーブルはbusiness_type_idで業態ごとに分離**
-- **税率はsettingsテーブルで管理、税込計算に使用**
-- **コースの売価は税込、原価率計算時は税抜換算して計算**
-- **needs_reviewフラグはitems, preparationsテーブルのみ（商品・コースは材料の状態から判断）**
-- **⚠️マーク表示は編集ページのみ（閲覧専用ページには出さない予定）**
