@@ -1,7 +1,7 @@
 import { supabase } from './supabase.js'
 import { calculateItemUnitCost } from './costCalculator.js'
 import { initBusinessTypeSelector, getCurrentBusinessTypeId } from './businessType.js'
-
+import { toHalfWidthKatakana, sanitizeToFullWidthKatakana, normalizeForSearch, fetchAllWithPaging, withBusinessTypeFilter } from './utils.js'
 // ============================================
 // DOM要素の取得
 // ============================================
@@ -57,12 +57,15 @@ const editUnitCostPreview = document.getElementById('editUnitCostPreview')
 const editUnitCostFormula = document.getElementById('editUnitCostFormula')
 const editItemGenre = document.getElementById('editItemGenre')
 const editItemNeedsReview = document.getElementById('editItemNeedsReview')
+const openEditProductSelectModalBtn = document.getElementById('openEditProductSelectModal')
+const editProductCode = document.getElementById('editProductCode')
 
 // ============================================
 // 状態管理
 // ============================================
 let allItems = []
 let allProducts = []
+let allSuppliers = []
 let allActiveProducts = []
 let searchQuery = ''
 let productSearchQuery = ''
@@ -70,6 +73,7 @@ let productFilterMode = 'unregistered'
 let expandedSupplier = null
 let allGenres = []
 let reviewFilterMode = 'all'
+let isEditProductMode = false // 編集モーダル用の商品選択かどうか
 
 // ============================================
 // 初期化
@@ -128,8 +132,13 @@ function setupEventListeners() {
 
     closeProductSelectModalBtn.addEventListener('click', () => {
         productSelectModal.classList.add('hidden')
-        // 作成モーダルを再表示
-        createModal.classList.remove('hidden')
+        // 元のモーダルを再表示
+        if (isEditProductMode) {
+            editModal.classList.remove('hidden')
+            isEditProductMode = false
+        } else {
+            createModal.classList.remove('hidden')
+        }
     })
 
 
@@ -181,6 +190,22 @@ function setupEventListeners() {
 
     // 削除実行
     deleteItemBtn.addEventListener('click', deleteItem)
+
+    // 編集用：商品選択モーダルを開く
+    openEditProductSelectModalBtn.addEventListener('click', () => {
+        isEditProductMode = true
+        productSearchQuery = ''
+        productSearchInput.value = ''
+        expandedSupplier = null
+        // 編集時は全商品から選べるようにする
+        productFilterMode = 'all'
+        const radio = document.querySelector('input[name="productFilter"][value="all"]')
+        if (radio) radio.checked = true
+        renderProductSelectList()
+        editModal.classList.add('hidden')
+        productSelectModal.classList.remove('hidden')
+    })
+
     // 要確認フィルター
     document.querySelectorAll('.review-filter-radio').forEach(radio => {
         radio.addEventListener('change', (e) => {
@@ -199,16 +224,10 @@ async function loadData() {
     const businessTypeId = getCurrentBusinessTypeId()
 
     // ジャンル一覧を取得（業態でフィルタ）
-    let genresQuery = supabase
-        .from('item_genres')
-        .select('*')
-        .order('sort_order', { ascending: true })
-
-    if (businessTypeId) {
-        genresQuery = genresQuery.eq('business_type_id', businessTypeId)
-    }
-
-    const { data: genres, error: genresError } = await genresQuery
+    const { data: genres, error: genresError } = await withBusinessTypeFilter(
+        supabase.from('item_genres').select('*').order('sort_order', { ascending: true }),
+        businessTypeId
+    )
 
     if (genresError) {
         console.error('ジャンル取得エラー:', genresError)
@@ -218,9 +237,8 @@ async function loadData() {
     }
 
     // アイテム一覧を取得（業態でフィルタ）
-    let itemsQuery = supabase
-        .from('items')
-        .select(`
+    const { data: items, error: itemsError } = await withBusinessTypeFilter(
+        supabase.from('items').select(`
             *,
             products (
                 product_name,
@@ -233,14 +251,9 @@ async function loadData() {
                 genre_name,
                 sort_order
             )
-        `)
-        .order('item_kana', { ascending: true })
-
-    if (businessTypeId) {
-        itemsQuery = itemsQuery.eq('business_type_id', businessTypeId)
-    }
-
-    const { data: items, error: itemsError } = await itemsQuery
+        `).order('item_kana', { ascending: true }),
+        businessTypeId
+    )
 
     if (itemsError) {
         console.error('アイテム取得エラー:', itemsError)
@@ -249,31 +262,35 @@ async function loadData() {
     }
 
     // 全商品を取得（ページング対応）※商品は業態共通
-    let productsData = []
-    let from = 0
-    const batchSize = 1000
+    const { data: productsData, error: productsError } = await fetchAllWithPaging(
+        'products',
+        '*',
+        { orderColumn: 'supplier_name', ascending: true }
+    )
 
-    while (true) {
-        const { data: batch, error: batchError } = await supabase
-            .from('products')
-            .select('*')
-            .order('supplier_name', { ascending: true })
-            .range(from, from + batchSize - 1)
-
-        if (batchError) {
-            console.error('商品取得エラー:', batchError)
-            return
-        }
-
-        productsData = productsData.concat(batch)
-
-        if (batch.length < batchSize) break
-        from += batchSize
+    if (productsError) {
+        console.error('商品取得エラー:', productsError)
+        return
     }
 
     allItems = items || []
     allProducts = productsData
     allActiveProducts = productsData.filter(p => p.is_active)
+    // 取引先一覧を取得（業態ごとの非表示設定をJOIN）
+    const { data: suppliers, error: suppliersError } = await supabase
+        .from('suppliers')
+        .select('*, supplier_business_types!inner(is_hidden)')
+        .eq('supplier_business_types.business_type_id', businessTypeId)
+        .eq('supplier_business_types.is_hidden', false)
+
+    if (suppliersError) {
+        console.error('取引先取得エラー:', suppliersError)
+    }
+
+    allSuppliers = (suppliers || []).map(s => ({
+        ...s,
+        is_hidden: s.supplier_business_types?.[0]?.is_hidden ?? false
+    }))
 
     updateStats()
     renderItems()
@@ -301,54 +318,9 @@ function updateStats() {
     pendingCount.textContent = `${pendingProducts.length} 件`
 }
 
-// ============================================
-// 半角カタカナ変換
-// ============================================
-function toHalfWidthKatakana(str) {
-    // ひらがな → 全角カタカナ
-    let result = str.replace(/[\u3041-\u3096]/g, (match) => {
-        return String.fromCharCode(match.charCodeAt(0) + 0x60)
-    })
 
-    // 全角カタカナ → 半角カタカナ
-    const kanaMap = {
-        'ア': 'ｱ', 'イ': 'ｲ', 'ウ': 'ｳ', 'エ': 'ｴ', 'オ': 'ｵ',
-        'カ': 'ｶ', 'キ': 'ｷ', 'ク': 'ｸ', 'ケ': 'ｹ', 'コ': 'ｺ',
-        'サ': 'ｻ', 'シ': 'ｼ', 'ス': 'ｽ', 'セ': 'ｾ', 'ソ': 'ｿ',
-        'タ': 'ﾀ', 'チ': 'ﾁ', 'ツ': 'ﾂ', 'テ': 'ﾃ', 'ト': 'ﾄ',
-        'ナ': 'ﾅ', 'ニ': 'ﾆ', 'ヌ': 'ﾇ', 'ネ': 'ﾈ', 'ノ': 'ﾉ',
-        'ハ': 'ﾊ', 'ヒ': 'ﾋ', 'フ': 'ﾌ', 'ヘ': 'ﾍ', 'ホ': 'ﾎ',
-        'マ': 'ﾏ', 'ミ': 'ﾐ', 'ム': 'ﾑ', 'メ': 'ﾒ', 'モ': 'ﾓ',
-        'ヤ': 'ﾔ', 'ユ': 'ﾕ', 'ヨ': 'ﾖ',
-        'ラ': 'ﾗ', 'リ': 'ﾘ', 'ル': 'ﾙ', 'レ': 'ﾚ', 'ロ': 'ﾛ',
-        'ワ': 'ﾜ', 'ヲ': 'ｦ', 'ン': 'ﾝ',
-        'ァ': 'ｧ', 'ィ': 'ｨ', 'ゥ': 'ｩ', 'ェ': 'ｪ', 'ォ': 'ｫ',
-        'ッ': 'ｯ', 'ャ': 'ｬ', 'ュ': 'ｭ', 'ョ': 'ｮ',
-        'ガ': 'ｶﾞ', 'ギ': 'ｷﾞ', 'グ': 'ｸﾞ', 'ゲ': 'ｹﾞ', 'ゴ': 'ｺﾞ',
-        'ザ': 'ｻﾞ', 'ジ': 'ｼﾞ', 'ズ': 'ｽﾞ', 'ゼ': 'ｾﾞ', 'ゾ': 'ｿﾞ',
-        'ダ': 'ﾀﾞ', 'ヂ': 'ﾁﾞ', 'ヅ': 'ﾂﾞ', 'デ': 'ﾃﾞ', 'ド': 'ﾄﾞ',
-        'バ': 'ﾊﾞ', 'ビ': 'ﾋﾞ', 'ブ': 'ﾌﾞ', 'ベ': 'ﾍﾞ', 'ボ': 'ﾎﾞ',
-        'パ': 'ﾊﾟ', 'ピ': 'ﾋﾟ', 'プ': 'ﾌﾟ', 'ペ': 'ﾍﾟ', 'ポ': 'ﾎﾟ',
-        'ヴ': 'ｳﾞ', 'ー': 'ｰ'
-    }
 
-    result = result.split('').map(char => kanaMap[char] || char).join('')
-    return result
-}
-// ============================================
-// 全角カタカナのみに制限（入力用）
-// ============================================
-function sanitizeToFullWidthKatakana(str) {
-    // ひらがな → 全角カタカナ
-    let result = str.replace(/[\u3041-\u3096]/g, (match) => {
-        return String.fromCharCode(match.charCodeAt(0) + 0x60)
-    })
 
-    // 全角カタカナとー（長音）のみ残す
-    result = result.replace(/[^ァ-ヶー]/g, '')
-
-    return result
-}
 
 // ============================================
 // アイテムの単位原価を取得（計算）
@@ -484,19 +456,24 @@ function renderItems() {
 // ============================================
 function renderProductSelectList() {
     const itemizedCodes = new Set(allItems.map(item => item.product_code))
-
+    // 非表示の業者を除外
+    const visibleSupplierNames = new Set(allSuppliers.map(s => s.supplier_name))
     let products = []
     if (productFilterMode === 'unregistered') {
-        products = allActiveProducts.filter(p => !itemizedCodes.has(p.product_code))
+        products = allActiveProducts.filter(p => !itemizedCodes.has(p.product_code) && visibleSupplierNames.has(p.supplier_name))
     } else if (productFilterMode === 'registered') {
-        products = allActiveProducts.filter(p => itemizedCodes.has(p.product_code))
+        products = allActiveProducts.filter(p => itemizedCodes.has(p.product_code) && visibleSupplierNames.has(p.supplier_name))
     } else {
-        products = allProducts
+        products = allProducts.filter(p => visibleSupplierNames.has(p.supplier_name))
     }
 
     // 検索フィルタ
     if (productSearchQuery) {
-        products = products.filter(p => p.product_name.includes(productSearchQuery))
+        const normalizedQuery = normalizeForSearch(productSearchQuery)
+        products = products.filter(p => {
+            const normalizedName = normalizeForSearch(p.product_name)
+            return normalizedName.includes(normalizedQuery) || p.product_name.includes(productSearchQuery)
+        })
     }
 
     if (products.length === 0) {
@@ -513,7 +490,11 @@ function renderProductSelectList() {
         grouped[p.supplier_name].push(p)
     }
 
-    const sortedSuppliers = Object.keys(grouped).sort((a, b) => a.localeCompare(b, 'ja'))
+    // 検索中は商品0件の業者を除外
+    let sortedSuppliers = Object.keys(grouped).sort((a, b) => a.localeCompare(b, 'ja'))
+    if (productSearchQuery) {
+        sortedSuppliers = sortedSuppliers.filter(supplier => grouped[supplier].length > 0)
+    }
 
     let html = ''
     for (const supplier of sortedSuppliers) {
@@ -578,23 +559,38 @@ function renderProductSelectList() {
             const price = parseFloat(row.dataset.price) || 0
             const isActive = row.dataset.active === 'true'
 
-            selectedProductCode.value = code
-            selectedProductPrice.value = price
-            selectedProductIsActive.value = isActive
-            selectedProductText.textContent = name
-            selectedProductText.classList.remove('text-gray-400')
-            selectedProductText.classList.add('text-gray-800')
+            if (isEditProductMode) {
+                // 編集モード：商品を変更
+                editProductCode.value = code
+                editProductPrice.value = price
 
-            let infoText = `規格: ${spec || '-'} / 単価: ¥${price.toLocaleString()}`
-            if (!isActive) {
-                infoText += ' ⚠️ 使用OFF（作成時に自動でONになります）'
+                // 商品情報を更新
+                const supplier = allProducts.find(p => p.product_code === code)?.supplier_name || ''
+                editProductInfo.textContent = `${supplier} / ${name}（${spec || '-'}）- ¥${price.toLocaleString()}`
+
+                updateEditUnitCostPreview()
+                productSelectModal.classList.add('hidden')
+                editModal.classList.remove('hidden')
+                isEditProductMode = false
+            } else {
+                // 作成モード：既存の処理
+                selectedProductCode.value = code
+                selectedProductPrice.value = price
+                selectedProductIsActive.value = isActive
+                selectedProductText.textContent = name
+                selectedProductText.classList.remove('text-gray-400')
+                selectedProductText.classList.add('text-gray-800')
+
+                let infoText = `規格: ${spec || '-'} / 単価: ¥${price.toLocaleString()}`
+                if (!isActive) {
+                    infoText += ' ⚠️ 使用OFF（作成時に自動でONになります）'
+                }
+                productInfo.textContent = infoText
+
+                updateCreateUnitCostPreview()
+                productSelectModal.classList.add('hidden')
+                createModal.classList.remove('hidden')
             }
-            productInfo.textContent = infoText
-
-            updateCreateUnitCostPreview()
-            productSelectModal.classList.add('hidden')
-            // 作成モーダルを再表示
-            createModal.classList.remove('hidden')
         })
     })
 }
@@ -674,6 +670,8 @@ function openEditModal(itemId) {
 
     editItemId.value = item.item_id
     editProductPrice.value = product?.unit_price || 0
+    // 商品コードもセット
+    editProductCode.value = item.product_code || ''
     editProductInfo.textContent = product
         ? `${product.supplier_name} / ${product.product_name}（${product.specification || '-'}）- ¥${(product.unit_price || 0).toLocaleString()}`
         : '（商品情報なし）'
@@ -807,6 +805,22 @@ async function updateItem() {
     submitEditBtn.disabled = true
     submitEditBtn.textContent = '更新中...'
 
+    // 商品コードが変更されているか確認
+    const newProductCode = editProductCode.value
+    const newProduct = allProducts.find(p => p.product_code === newProductCode)
+
+    // 使用OFFの商品なら自動でONにする
+    if (newProduct && !newProduct.is_active) {
+        const { error: updateError } = await supabase
+            .from('products')
+            .update({ is_active: true })
+            .eq('product_code', newProductCode)
+
+        if (updateError) {
+            console.error('商品フラグ更新エラー:', updateError)
+        }
+    }
+
     const { error } = await supabase
         .from('items')
         .update({
@@ -815,7 +829,8 @@ async function updateItem() {
             genre_id: parseInt(genreIdValue),
             unit: unit,
             yield_quantity: qty,
-            needs_review: needsReview
+            needs_review: needsReview,
+            product_code: newProductCode  // ← 追加
         })
         .eq('item_id', itemId)
 
@@ -838,6 +853,63 @@ async function updateItem() {
 // ============================================
 async function deleteItem() {
     const itemId = parseInt(editItemId.value)
+
+    // 仕込み品で使われているかチェック
+    const { data: prepUsage, error: prepError } = await supabase
+        .from('preparation_ingredients')
+        .select(`
+            preparation_id,
+            preparations (preparation_name)
+        `)
+        .eq('ingredient_type', 'item')
+        .eq('ingredient_id', itemId)
+
+    if (prepError) {
+        console.error('参照チェックエラー:', prepError)
+        alert('削除チェックに失敗しました')
+        return
+    }
+
+    // 商品で使われているかチェック
+    const { data: dishUsage, error: dishError } = await supabase
+        .from('dish_ingredients')
+        .select(`
+            dish_id,
+            dishes (dish_name)
+        `)
+        .eq('ingredient_type', 'item')
+        .eq('ingredient_id', itemId)
+
+    if (dishError) {
+        console.error('参照チェックエラー:', dishError)
+        alert('削除チェックに失敗しました')
+        return
+    }
+
+    // 参照先リストを作成
+    const usedIn = []
+
+    if (prepUsage) {
+        prepUsage.forEach(p => {
+            if (p.preparations) {
+                usedIn.push(`仕込み品 / ${p.preparations.preparation_name}`)
+            }
+        })
+    }
+
+    if (dishUsage) {
+        dishUsage.forEach(d => {
+            if (d.dishes) {
+                usedIn.push(`商品 / ${d.dishes.dish_name}`)
+            }
+        })
+    }
+
+    // 参照があれば削除禁止
+    if (usedIn.length > 0) {
+        alert(`削除できません。以下で使用されています：\n\n${usedIn.join('\n')}`)
+        return
+    }
 
     if (!confirm('このアイテムを削除しますか？')) {
         return

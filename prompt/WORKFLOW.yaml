@@ -1,58 +1,73 @@
 # =====================================
-# 💾 開発ワークフロー・進捗管理
+# 💾 WORKFLOW.yaml
 # =====================================
-# WORKFLOW.yaml
+#
 # 【このファイルの役割】
-# - プロジェクトの進捗・決定事項・ファイル構成を管理
-# - セーブデータとして渡すことで、前回の続きから再開可能
-# - ⚠️ ここに書かれていないことはプロジェクトから消える
+# プロジェクトの進捗状況・決定事項・ファイル構成を記録するセーブデータ。
+# プロジェクトの「今どうなっているか」を保存する。頻繁に更新される動的な情報。
+# このファイルをAIに渡すことで、前回の続きから開発を再開できる。
+#
+# 【このファイルに書くこと】
+# - 機能一覧と各機能のステータス（done / planned / in_progress）
+# - 採用した決定事項（なぜその実装方法を選んだか）
+# - 保留中の決定事項（後で検討する予定のもの）
+# - 現在の進捗（今どのフェーズか、次に何をやるか）
+# - ファイル構成（どのファイルが何の役割か、依存関係）
+# - 開発中に発見した注意点・ハマったこと
+# - 将来の拡張候補（いつか追加するかもしれない設定等）
+# - 運用データ（業態一覧など、DBの現状を反映したもの）
+#
+# 【このファイルに書かないこと】
+# - AIの振る舞いやルール → SYSTEM_PROMPT.yaml
+# - 開発プロセスの定義 → SYSTEM_PROMPT.yaml
+# - プロジェクト固有の設定・仕様 → PROJECT_SPECIFIC.yaml
+# - 技術スタック・環境情報 → PROJECT_SPECIFIC.yaml
+# - テーブル定義・カラム情報 → DATABASE.md
+# - SQLやマイグレーション履歴 → DATABASE.md
+#
+# 【このファイルを更新するタイミング】
+# - 機能の実装が完了したとき → features のステータスを done に
+# - 新しい機能を追加することが決まったとき → features に追加
+# - 実装方法を決定したとき → decisions.adopted に追加
+# - 後で検討することにしたとき → decisions.postponed に追加
+# - 新しいファイルを作成したとき → file_structure に追加
+# - ハマったこと・注意点を発見したとき → cautions に追加
+# - セッション終了時 → last_updated と last_session_summary を更新
+# - 業態を追加・変更したとき → current_data.business_types を更新
+#
+# 【セクション構成】
+# 1. 要件定義（機能一覧）
+# 2. 決定事項の記録
+# 3. 現在の進捗
+# 4. ファイル構成
+# 5. 注意点・ハマったこと
+# 6. 将来の拡張候補
+# 7. 現在のデータ状況
+#
+# 【重要】
+# ⚠️ ここに書かれていない進捗・決定事項はプロジェクトから消える
+# ⚠️ git push前に必ずこのファイルを更新すること
+# ⚠️ セッション終了時にAIが更新版を出力するので保存すること
 #
 # =====================================
 
-
 workflow:
-  version: "2.0"
-  last_updated: "2025-12-27"
+  version: "3.0"
+  last_updated: "2025-12-28"
   last_session_summary: |
-    要確認（needs_review）フラグ機能を実装した。
-    - items, preparationsテーブルにneeds_reviewカラム追加
-    - アイテム画面：要確認チェックボックス、赤表示、フィルター機能
-    - 仕込み品画面：要確認チェックボックス、赤表示、材料に要確認ありで⚠️マーク、フィルター機能
-    - 商品画面：材料に要確認ありで⚠️マーク、フィルター機能
-    - コース画面：商品に要確認ありで⚠️マーク、フィルター機能
-    - クイックアイテム作成にも要確認チェックボックス追加
-    - DATABASE.md更新済み
-    
-    ※⚠️マーク表示は編集ページのみ（閲覧専用ページには出さない予定）
-    
-    次はメニューブック / レシピブックへ進む
-
+    F021: 仕入れ商品・業者設定の業態別管理を実装完了。
+    - product_business_types テーブル追加（商品×業態の使用フラグ管理）
+    - supplier_business_types テーブル追加（業者×業態の非表示フラグ管理）
+    - productsテーブルからis_active列を削除
+    - suppliersテーブルからis_hidden列を削除
+    - import.js修正（CSVインポート時に全業態分の中間テーブルレコード作成）
+    - main.js修正（業態セレクタ追加、中間テーブル参照に変更）
+    - master.js修正（業態追加時に全商品・全業者分の中間テーブルレコード作成）
+    - items.js, preparations.js, dishes.js修正（取引先取得を中間テーブルJOINに変更）
+    - dishes.htmlのクイックアイテム作成モーダルにジャンル選択・要確認チェックボックス追加
 
 # =====================================
-# 1. プロジェクト基本情報
-# =====================================
-project:
-  name: "レシピ管理・原価計算システム"
-  description: "飲食店のレシピ管理と原価計算を効率化するWebアプリ"
-  repository_url: "https://github.com/m-hiro1013/recipe-manager.git"
-  production_url: "https://recipe-manager-blue-one.vercel.app/"
-  created_at: "2025-01-20"
-
-
-  user:
-    name: "ひろきくん"
-
-
-  tech_stack:
-    backend: "Supabase"
-    frontend: "HTML / CSS / JavaScript"
-    css_framework: "TailwindCSS (v4)"
-    build_tool: "Vite"
-    deploy: "Vercel"
-
-
-# =====================================
-# 2. 要件定義（全体像）
+# 1. 要件定義（機能一覧）
 # =====================================
 requirements:
   goal:
@@ -67,716 +82,482 @@ requirements:
       - "複数業態に対応できる"
       - "コースを作成できる"
 
-
   features:
     # フェーズ1（完了）
     - id: "F001"
       name: "CSVインポート機能"
       status: "done"
-      completed_at: "2025-01-23"
-      notes: "Shift-JIS対応、重複は更新日で新しい方を採用"
-
-
     - id: "F002"
       name: "仕入れ商品一覧画面"
       status: "done"
-      completed_at: "2025-12-23"
-      notes: "五十音順、検索、ページネーション、詳細/コンパクト表示切り替え"
-
-
     - id: "F003"
       name: "使用商品フラグ機能"
       status: "done"
-      completed_at: "2025-12-23"
-      notes: "表示切り替え（OFFだけ/ONだけ/全部）、デフォルトは全部"
-
-
     - id: "F004"
       name: "業者単位の一括ON/OFF"
       status: "done"
-      completed_at: "2025-01-23"
-
-
     - id: "F005"
       name: "業者の非表示機能"
       status: "done"
-      completed_at: "2025-01-23"
-      notes: "非表示リストモーダルで確認・復活可能"
-
-
     - id: "F006"
       name: "アイテム登録機能"
       status: "done"
-      completed_at: "2025-12-24"
-      notes: "ジャンル選択必須、1商品から複数アイテム可、読み仮名で五十音順ソート"
-
-
     - id: "F007"
       name: "仕込み品登録機能"
       status: "done"
-      completed_at: "2025-12-24"
-      notes: "セクション選択必須、材料タブ切り替え、クイックアイテム作成"
-
-
     - id: "F008"
       name: "商品登録機能"
       status: "done"
-      completed_at: "2025-12-25"
-      notes: "セクション選択必須、仕上がり常に1単位、材料タブ切り替え"
-
-
     - id: "F009"
       name: "原価自動計算"
       status: "done"
-      completed_at: "2025-12-25"
-
-
     - id: "F010"
       name: "マスタ管理機能"
       status: "done"
-      completed_at: "2025-12-27"
-      notes: "アイテムジャンル・仕込み品セクション・商品セクション・業態・税率設定のCRUD"
-
 
     # フェーズ2
     - id: "F011"
       name: "正規化対応"
       status: "done"
-      completed_at: "2025-12-25"
-      notes: "cost/unit_cost列を削除、costCalculator.jsで表示時に計算"
-
-
     - id: "F012"
       name: "業態展開"
       status: "done"
-      completed_at: "2025-12-27"
-      notes: |
-        - business_typesテーブル作成
-        - 各テーブルにbusiness_type_id追加
-        - businessType.js作成
-        - 全画面に業態セレクタ追加
-        - 動作確認完了
-
-
     - id: "F013"
       name: "売価・原価率追加"
       status: "done"
-      completed_at: "2025-12-27"
-      notes: |
-        - settingsテーブル作成（税率管理）
-        - dishesにselling_price追加
-        - 商品一覧に売価・税込・原価率表示
-        - マスタ管理に税率設定追加
-
-
     - id: "F014"
       name: "コース機能"
       status: "done"
-      completed_at: "2025-12-27"
-      notes: |
-        - courses, course_itemsテーブル作成
-        - is_active（実施中フラグ）追加
-        - コース一覧（実施中/未実施で分けて金額順表示）
-        - ポーション対応（0.25, 0.5, 1など）
-        - 商品の並び替えUI（移動ボタン→移動先クリック方式）
-        - 原価率は税抜換算して計算
-
-
     - id: "F017"
       name: "要確認フラグ機能"
       status: "done"
-      completed_at: "2025-12-27"
-      notes: |
-        - items, preparationsテーブルにneeds_review追加
-        - アイテム：要確認チェックボックス、赤表示、フィルター
-        - 仕込み品：要確認チェックボックス、赤表示、材料に要確認ありで⚠️マーク、フィルター
-        - 商品：材料に要確認ありで⚠️マーク、フィルター
-        - コース：商品に要確認ありで⚠️マーク、フィルター
-        - クイックアイテム作成にも要確認チェックボックス追加
-        - ⚠️マーク表示は編集ページのみ（閲覧専用ページには出さない予定）
-
-
+    - id: "F018"
+      name: "リファクタリング（utils.js共通化）"
+      status: "done"
+      notes: "Phase 1〜3完了（重複関数削除、fetchAllWithPaging、withBusinessTypeFilter）、Phase 5完了（材料選択モーダル・クイックアイテム作成の共通化）"
     - id: "F015"
       name: "メニューブック"
-      status: "planned"
+      status: "done"
       notes: "商品一覧の閲覧特化ページ、アコーディオンで無限階層展開"
-
-
     - id: "F016"
       name: "レシピブック"
-      status: "planned"
-      notes: "仕込み品一覧の閲覧特化ページ、アコーディオンで無限階層展開"
-
-
-  screens:
-    - id: "S001"
-      name: "仕入れ商品一覧（トップページ）"
-      path: "/"
-      file: "index.html"
-
-
-    - id: "S002"
-      name: "インポート画面"
-      path: "/import.html"
-      file: "import.html"
-
-
-    - id: "S003"
-      name: "アイテム画面"
-      path: "/items.html"
-      file: "items.html"
-
-
-    - id: "S004"
-      name: "仕込み品画面"
-      path: "/preparations.html"
-      file: "preparations.html"
-
-
-    - id: "S005"
-      name: "商品画面"
-      path: "/dishes.html"
-      file: "dishes.html"
-
-
-    - id: "S006"
-      name: "マスタ管理画面"
-      path: "/master.html"
-      file: "master.html"
-
-
-    - id: "S007"
-      name: "コース画面"
-      path: "/courses.html"
-      file: "courses.html"
       status: "done"
-
-
-    - id: "S008"
-      name: "メニューブック"
-      path: "/menubook.html"
-      file: "menubook.html"
-      status: "planned"
-
-
-    - id: "S009"
-      name: "レシピブック"
-      path: "/recipebook.html"
-      file: "recipebook.html"
-      status: "planned"
-
+      notes: "仕込み品一覧の閲覧特化ページ、アコーディオンで無限階層展開"
+    - id: "F019"
+      name: "メニューブック・レシピブック分量表示改善"
+      status: "done"
+      notes: "材料名40%固定幅、分量・原価左寄せ、縦列揃え、ボーダー追加"
+    - id: "F020"
+      name: "コース一覧アコーディオン化"
+      status: "done"
+      notes: "カードクリックで商品展開、複数同時オープンOK、閉じるボタン・編集ボタン、原価表示追加"
+    - id: "F021"
+      name: "仕入れ商品・業者設定の業態別管理"
+      status: "done"
+      notes: "product_business_types、supplier_business_typesテーブル追加。使用フラグ・非表示フラグを業態ごとに管理"
 
 # =====================================
-# 3. 決定事項の記録
+# 2. 決定事項の記録
 # =====================================
 decisions:
   adopted:
-    - id: "D011"
-      idea: "読み仮名を必須にして半角カタカナで保存"
-      reason: "五十音順ソートと検索のため"
-      related_feature: "F006"
-
-
+    # --- UI/UX ---
     - id: "D012"
       idea: "商品選択フィルター3段階（未登録/登録済み/全商品）"
-      related_feature: "F006"
-
-
     - id: "D013"
       idea: "全商品から選択時は使用フラグ自動ON"
-      related_feature: "F006"
-
-
     - id: "D015"
       idea: "材料選択はタブ切り替え（アイテム/仕込み品/仕入れ商品）"
-      related_feature: "F007"
-
-
     - id: "D016"
       idea: "材料追加は複数チェック選択→まとめて追加方式"
-      related_feature: "F007"
-
-
     - id: "D018"
       idea: "仕入れ商品からその場でアイテム作成→材料に追加できる"
-      related_feature: "F007"
-
-
     - id: "D019"
       idea: "クイックアイテム作成後は選択リストに追加してアイテムタブに戻る"
-      related_feature: "F007"
-
-
     - id: "D020"
       idea: "モーダル外クリックでの閉じるを禁止"
       reason: "入力中のデータが消えるリスクを防ぐ"
-
-
-    - id: "D021"
-      idea: "読み仮名は全角カタカナのみ入力可能"
-      related_feature: "F006"
-
-
     - id: "D023"
       idea: "仕上がり量・単位は材料リストの下に配置"
-      related_feature: "F007"
-
-
-    - id: "D024"
-      idea: "アイテムにジャンル機能追加"
-      related_feature: "F006"
-
-
-    - id: "D025"
-      idea: "仕込み品にセクション機能追加"
-      related_feature: "F007"
-
-
-    - id: "D027"
-      idea: "商品にもセクション機能追加"
-      related_feature: "F008"
-
-
-    - id: "D028"
-      idea: "商品の仕上がりは常に1単位（入力不要）"
-      related_feature: "F008"
-
-
-    - id: "D029"
-      idea: "正規化対応：cost/unit_cost列を削除し、表示時に計算"
-      reason: "データ整合性を常に担保するため"
-      related_feature: "F011"
-
-
-    - id: "D030"
-      idea: "業態展開：仕入れ商品は共通、他は業態ごとに分離"
-      reason: "全業態で同じインフォマートCSVを使用"
-      related_feature: "F012"
-
-
-    - id: "D031"
-      idea: "業態切り替え：サイドメニューのセレクタで切り替え"
-      related_feature: "F012"
-
-
-    - id: "D032"
-      idea: "1人のユーザーが複数業態を使えるケースあり"
-      related_feature: "F012"
-
-
-    - id: "D033"
-      idea: "売価は税抜きで入力、原価率は自動計算"
-      related_feature: "F013"
-
-
-    - id: "D034"
-      idea: "コースの売価は税込で入力、原価率は税抜換算で計算"
-      reason: "税込入力→税抜計算の注釈を表示"
-      related_feature: "F014"
-
-
-    - id: "D035"
-      idea: "税率は10%デフォルト、変更可能（settingsテーブルで管理）"
-      related_feature: "F013"
-
-
-    - id: "D036"
-      idea: "メニューブック/レシピブックはアコーディオンで無限階層展開"
-      related_feature: "F015, F016"
-
-
     - id: "D037"
       idea: "商品一覧は横並びコンパクトレイアウト（商品名・原価・売価・原価率）"
-      related_feature: "F013"
-
-
-    - id: "D038"
-      idea: "全業態共通項目には「共通」タグを表示し、変更時は確認メッセージを出す"
-      reason: "誤操作防止と影響範囲の明示"
-      related_feature: "F012, F013"
-
-
-    - id: "D039"
-      idea: "コースの中身は商品（dishes）のみ"
-      reason: "シンプル、原価計算もわかりやすい"
-      related_feature: "F014"
-
-
-    - id: "D040"
-      idea: "コースにポーション機能（0.25, 0.5, 1など）"
-      reason: "コース料理はグランドメニューより少量のケースが多い"
-      related_feature: "F014"
-
-
-    - id: "D041"
-      idea: "コース一覧は実施中/未実施で分けて金額順表示"
-      reason: "手動並び替えは不要、シンプルに"
-      related_feature: "F014"
-
-
     - id: "D042"
       idea: "コース内商品の並び替えは移動ボタン→移動先クリック方式"
       reason: "ドラッグ&ドロップより実装シンプル、スマホでも使いやすい"
-      related_feature: "F014"
+    - id: "D069"
+      idea: "メニューブック・レシピブックの分量表示を固定幅レイアウトに改善"
+      reason: "材料・分量がパッと見で分かるように"
+    - id: "D070"
+      idea: "コース一覧をアコーディオン化、複数同時オープン可能"
+      reason: "編集せずに内容確認したいケースに対応"
+    - id: "D071"
+      idea: "コースの編集ボタンをカードに配置、クリックは展開に変更"
+      reason: "閲覧と編集を分離"
+    - id: "D072"
+      idea: "コースカードに原価を追加表示"
+      reason: "売価・原価・原価率をまとめて確認できるように"
+    - id: "D073"
+      idea: "材料名エリアを幅40%固定、長い名前は折り返し表示"
+      reason: "分量・原価の縦列を揃えるため"
+    - id: "D074"
+      idea: "材料リスト間に薄いボーダー（border-gray-200）を追加"
+      reason: "視認性向上"
 
+    # --- データ構造 ---
+    - id: "D011"
+      idea: "読み仮名を必須にして半角カタカナで保存"
+      reason: "五十音順ソートと検索のため"
+    - id: "D021"
+      idea: "読み仮名は全角カタカナのみ入力可能"
+    - id: "D024"
+      idea: "アイテムにジャンル機能追加"
+    - id: "D025"
+      idea: "仕込み品にセクション機能追加"
+    - id: "D027"
+      idea: "商品にもセクション機能追加"
+    - id: "D028"
+      idea: "商品の仕上がりは常に1単位（入力不要）"
+    - id: "D029"
+      idea: "正規化対応：cost/unit_cost列を削除し、表示時に計算"
+      reason: "データ整合性を常に担保するため"
 
+    # --- 業態展開 ---
+    - id: "D030"
+      idea: "業態展開：仕入れ商品は共通、他は業態ごとに分離"
+      reason: "全業態で同じインフォマートCSVを使用"
+    - id: "D031"
+      idea: "業態切り替え：サイドメニューのセレクタで切り替え"
+    - id: "D032"
+      idea: "1人のユーザーが複数業態を使えるケースあり"
+    - id: "D038"
+      idea: "全業態共通項目には「共通」タグを表示し、変更時は確認メッセージを出す"
+      reason: "誤操作防止と影響範囲の明示"
+    - id: "D076"
+      idea: "仕入れ商品の使用フラグ・業者の非表示フラグを業態ごとに管理"
+      reason: "業態によって使う商品・業者が異なるため"
+    - id: "D077"
+      idea: "中間テーブル方式（product_business_types, supplier_business_types）で管理"
+      reason: "正規化対応、仕入れ商品・業者のマスタは共通のまま設定だけを分離"
+    - id: "D078"
+      idea: "CSVインポート時・業態追加時に中間テーブルレコードを自動作成"
+      reason: "データ整合性を確実に担保するため"
+
+    # --- 売価・原価率 ---
+    - id: "D033"
+      idea: "売価は税抜きで入力、原価率は自動計算"
+    - id: "D034"
+      idea: "コースの売価は税込で入力、原価率は税抜換算で計算"
+      reason: "税込入力→税抜計算の注釈を表示"
+    - id: "D035"
+      idea: "税率は10%デフォルト、変更可能（settingsテーブルで管理）"
+
+    # --- コース ---
+    - id: "D039"
+      idea: "コースの中身は商品（dishes）のみ"
+      reason: "シンプル、原価計算もわかりやすい"
+    - id: "D040"
+      idea: "コースにポーション機能（0.25, 0.5, 1など）"
+      reason: "コース料理はグランドメニューより少量のケースが多い"
+    - id: "D041"
+      idea: "コース一覧は実施中/未実施で分けて金額順表示"
+      reason: "手動並び替えは不要、シンプルに"
     - id: "D043"
       idea: "コースに読み仮名（course_kana）をつける"
-      related_feature: "F014"
-
-
     - id: "D044"
       idea: "コースは業態ごとに分ける"
-      related_feature: "F014"
-
-
     - id: "D045"
       idea: "コースのセクションは後で追加（YAGNI）"
-      related_feature: "F014"
+    - id: "D075"
+      idea: "未実施コースの薄く表示（opacity-60）を削除"
+      reason: "通常の濃さで表示したい"
 
-
+    # --- 要確認フラグ ---
     - id: "D046"
       idea: "要確認フラグはitems, preparationsテーブルのみ（商品・コースは材料の状態から判断）"
       reason: "商品は材料の組み合わせだけなので材料側のフラグで十分"
-      related_feature: "F017"
-
-
     - id: "D047"
       idea: "要確認フラグは下から上に伝播（アイテム→仕込み品→商品→コース）"
       reason: "材料に要確認があれば上位も確認が必要なため"
-      related_feature: "F017"
-
-
     - id: "D048"
       idea: "⚠️マーク表示は編集ページのみ（閲覧専用ページには出さない）"
       reason: "閲覧ページは見やすさ重視"
-      related_feature: "F017"
 
+    # --- 削除・検索 ---
+    - id: "D049"
+      idea: "削除時に参照先をDBクエリでチェック（ローカルキャッシュではなく）"
+      reason: "データ整合性を確実に担保するため"
+    - id: "D050"
+      idea: "アイテム編集で仕入れ商品を変更可能にする"
+    - id: "D051"
+      idea: "仕入れ商品検索はカタカナ全角/半角両対応（normalizeForSearch使用）"
+    - id: "D052"
+      idea: "検索中は商品0件の業者を非表示"
+    - id: "D053"
+      idea: "非表示にした業者はクイックアイテム作成でも除外"
+
+    # --- リファクタリング ---
+    - id: "D054"
+      idea: "重複コードをutils.jsに共通化"
+      reason: "保守性向上、コード量削減"
+    - id: "D055"
+      idea: "fetchAllWithPaging関数でページング取得を共通化"
+      reason: "5ファイルで同じコードが重複していた"
+    - id: "D056"
+      idea: "withBusinessTypeFilter関数で業態フィルタを共通化"
+      reason: "4ファイルで同じパターンが重複していた"
+    - id: "D057"
+      idea: "IngredientModalManagerクラスで材料選択モーダルを共通化"
+      reason: "preparations.jsとdishes.jsで約290行が重複していた"
+    - id: "D058"
+      idea: "QuickItemModalManagerクラスでクイックアイテム作成を共通化"
+      reason: "preparations.jsとdishes.jsで約110行が重複していた"
+    - id: "D059"
+      idea: "renderIngredientList関数で材料リスト表示を共通化"
+      reason: "作成/編集フォームで約80行が重複していた"
+
+    # --- 閲覧ページ ---
+    - id: "D036"
+      idea: "メニューブック/レシピブックはアコーディオンで無限階層展開"
+    - id: "D060"
+      idea: "アコーディオン初期状態は全セクション閉じた状態"
+    - id: "D061"
+      idea: "アコーディオンはスライドアニメーション"
+      reason: "急に切り替わると目が追いつかない"
+    - id: "D062"
+      idea: "開閉ボタンは上下両方に配置"
+      reason: "縦に長い場合に上までスクロールするのが面倒"
+    - id: "D063"
+      idea: "材料表示は名前・数量・単位・原価"
+    - id: "D064"
+      idea: "商品/仕込み品表示は名前（材料N種）+ 原価情報"
+    - id: "D065"
+      idea: "検索は名前のみ（セクションフィルターなし）"
+    - id: "D066"
+      idea: "セクションもアコーディオン"
+    - id: "D067"
+      idea: "同階層は排他（1つだけ開く）、全階層で適用"
+    - id: "D068"
+      idea: "親を閉じたら子孫も全部リセット"
 
   postponed:
     - id: "P001"
       idea: "歩留率の導入"
-      reason: "YAGNIで後回し"
       trigger: "必要になったら"
-
-
     - id: "P002"
       idea: "業態PM、店舗マネージャー、スタッフの権限範囲"
       trigger: "フェーズ2開始時"
-
-
-    - id: "P003"
-      idea: "業態切り替え方法（タブ/セレクト/フィルター）"
-      trigger: "フェーズ2開始時"
-      resolution: "サイドメニューのセレクタに決定（D031）"
-
-
     - id: "P004"
       idea: "削除された商品の扱い"
       trigger: "運用開始後"
-
-
     - id: "P005"
       idea: "賞味期限管理、発注ロット"
       trigger: "必要になったら"
-
-
     - id: "P006"
       idea: "循環参照の登録時バリデーション"
-      reason: "現実の料理ではありえないケース、YAGNIで後回し"
       trigger: "問題が発生したら"
-
-
     - id: "P007"
       idea: "コースのセクション機能"
-      reason: "YAGNIで後回し"
       trigger: "必要になったら"
-
+    - id: "P008"
+      idea: "リファクタリング Phase 4（UI操作の共通化）"
+      trigger: "必要になったら"
+    - id: "P009"
+      idea: "メニューブック複数作成機能（大型店用/小型店用など）"
+      trigger: "運用して必要になったら"
 
 # =====================================
-# 4. 現在の進捗
+# 3. 現在の進捗
 # =====================================
 progress:
   current_phase:
-    step: "step2_implementation_phase2"
-    name: "フェーズ2実装"
+    step: "運用テスト"
+    name: "運用テストフェーズ"
     status: "in_progress"
-    notes: "要確認フラグ機能完了、次はメニューブック / レシピブック"
-
 
   current_task:
-    description: "④ メニューブック / レシピブック"
+    description: "実際にデータを入れて使ってみる"
 
-
-  implementation_order:
-    - order: 0
-      name: "正規化対応"
-      status: "done"
-      completed_at: "2025-12-25"
-      details: |
-        - costCalculator.js を新規作成
-        - items.js, preparations.js, dishes.js を修正
-        - DBからunit_cost, cost列を削除
-        - DATABASE.md を更新
-
-
-    - order: 0.5
-      name: "整合性確認・テスト"
-      status: "done"
-      completed_at: "2025-12-25"
-      details: |
-        - 動作確認OK
-
-
+  next_tasks:
     - order: 1
-      name: "業態展開"
-      status: "done"
-      completed_at: "2025-12-27"
-      details: |
-        - business_typesテーブル作成済み
-        - 各テーブルにbusiness_type_id追加済み
-        - businessType.js 作成済み
-        - items.js, preparations.js, dishes.js に業態セレクタ追加済み
-        - master.js に業態セレクタ・フィルタ・登録時紐づけ追加
-        - 既存ジャンル・セクションを全3業態に複製済み
-        - 既存アイテム・仕込み品・商品を業態1に紐づけ済み
-        - 動作確認完了
-
-
-    - order: 2
-      name: "売価・原価率追加"
-      status: "done"
-      completed_at: "2025-12-27"
-      details: |
-        - settingsテーブル作成（税率管理）
-        - dishesにselling_price追加
-        - 商品一覧に売価・税込・原価率表示（横並びコンパクトレイアウト）
-        - 商品作成/編集モーダルに売価入力欄追加
-        - マスタ管理に税率設定セクション追加（共通タグ・確認メッセージ付き）
-
-
-    - order: 3
-      name: "コース機能"
-      status: "done"
-      completed_at: "2025-12-27"
-      details: |
-        - courses, course_itemsテーブル作成
-        - is_active（実施中フラグ）追加
-        - courses.html, courses.js 新規作成
-        - コース一覧（実施中/未実施で分けて金額順表示）
-        - コース作成/編集モーダル
-        - ポーション対応（0.25, 0.5, 1など）
-        - 商品の並び替えUI（移動ボタン→移動先クリック方式）
-        - 全HTMLのサイドメニューにコース追加
-
-
-    - order: 3.5
-      name: "要確認フラグ機能"
-      status: "done"
-      completed_at: "2025-12-27"
-      details: |
-        - items, preparationsテーブルにneeds_review追加
-        - items.html, items.js：要確認チェックボックス、赤表示、フィルター
-        - preparations.html, preparations.js：要確認チェックボックス、赤表示、⚠️マーク、フィルター
-        - dishes.html, dishes.js：⚠️マーク、フィルター
-        - courses.html, courses.js：⚠️マーク、フィルター
-        - クイックアイテム作成にも要確認チェックボックス追加
-        - DATABASE.md更新済み
-
-
-    - order: 4
-      name: "メニューブック / レシピブック"
+      name: "運用テストで課題を洗い出す"
       status: "not_started"
       details: |
-        【画面変更】
-        - menubook.html新規作成
-        - recipebook.html新規作成
-        - アコーディオンで無限階層展開
-        - 閲覧のみ（編集不可）
-        - ⚠️マーク表示なし（編集ページのみの機能）
-
-
-  completed_phases:
-    - step: "step0_setup"
-      completed_at: "2025-01-20"
-      summary: "Vite + TailwindCSS、Supabase、Git + GitHub、Vercel設定完了"
-
-
-    - step: "step1_hearing"
-      completed_at: "2025-01-20"
-      summary: "システム概要、データ構造、フェーズ1機能を確定"
-
-
-    - step: "step3_implementation_phase1"
-      completed_at: "2025-12-25"
-      summary: "F001〜F010全て完了"
-
-
-    - step: "step1_hearing_phase2"
-      completed_at: "2025-12-25"
-      summary: "フェーズ2要件定義完了（正規化、業態展開、売価原価率、コース、閲覧ページ）"
-
-
-    - step: "step2_normalization"
-      completed_at: "2025-12-25"
-      summary: "F011正規化対応完了（costCalculator.js作成、DB列削除）"
-
-
-    - step: "step2_business_type"
-      completed_at: "2025-12-27"
-      summary: "F012業態展開完了（businessType.js作成、全画面対応）"
-
-
-    - step: "step2_selling_price"
-      completed_at: "2025-12-27"
-      summary: "F013売価・原価率追加完了（settingsテーブル、税率設定、商品画面対応）"
-
-
-    - step: "step2_course"
-      completed_at: "2025-12-27"
-      summary: "F014コース機能完了（courses/course_itemsテーブル、実施中フラグ、ポーション、並び替えUI）"
-
-
-    - step: "step2_needs_review"
-      completed_at: "2025-12-27"
-      summary: "F017要確認フラグ機能完了（needs_reviewカラム追加、全画面対応、⚠️マーク伝播）"
-
+        F021（仕入れ商品・業者設定の業態別管理）を実装完了。
+        実際に使ってみて、問題点や改善点を洗い出す。
 
 # =====================================
-# 5. ファイル構成
+# 4. ファイル構成
 # =====================================
 file_structure:
-  last_updated: "2025-12-27"
   tree: |
     project-root/
     ├── index.html          ← 仕入れ商品一覧（トップページ）
     ├── import.html         ← インポート画面
-    ├── items.html          ← アイテム画面（要確認フラグ対応）
-    ├── preparations.html   ← 仕込み品画面（要確認フラグ対応）
-    ├── dishes.html         ← 商品画面（⚠️マーク対応）
+    ├── items.html          ← アイテム画面
+    ├── preparations.html   ← 仕込み品画面
+    ├── dishes.html         ← 商品画面
     ├── master.html         ← マスタ管理画面
-    ├── courses.html        ← コース画面（⚠️マーク対応）
-    ├── menubook.html       ← メニューブック（予定）
-    ├── recipebook.html     ← レシピブック（予定）
+    ├── courses.html        ← コース画面
+    ├── menubook.html       ← メニューブック（閲覧専用）
+    ├── recipebook.html     ← レシピブック（閲覧専用）
     ├── vite.config.js
     ├── package.json
     ├── .env
     ├── prompt/
-    │   ├── SYSTEM_PROMPT.yaml
-    │   ├── WORKFLOW.yaml
-    │   └── DATABASE.md
+    │   ├── SYSTEM_PROMPT.yaml   ← AI振る舞い・汎用ルール
+    │   ├── PROJECT_SPECIFIC.yaml ← プロジェクト固有設定
+    │   ├── WORKFLOW.yaml         ← 進捗・決定事項
+    │   └── DATABASE.md           ← テーブル定義
     └── src/
-        ├── main.js            ← 仕入れ商品一覧用JS
-        ├── import.js          ← インポート用JS
-        ├── items.js           ← アイテム用JS（要確認フラグ対応）
-        ├── preparations.js    ← 仕込み品用JS（要確認フラグ対応）
-        ├── dishes.js          ← 商品用JS（⚠️マーク対応）
-        ├── master.js          ← マスタ管理用JS
-        ├── courses.js         ← コース用JS（⚠️マーク対応）
-        ├── menubook.js        ← メニューブック用JS（予定）
-        ├── recipebook.js      ← レシピブック用JS（予定）
-        ├── costCalculator.js  ← 原価計算共通関数
-        ├── businessType.js    ← 業態管理共通モジュール
-        ├── supabase.js        ← Supabase接続（共通）
+        ├── main.js              ← 仕入れ商品一覧用JS
+        ├── import.js            ← インポート用JS
+        ├── items.js             ← アイテム用JS
+        ├── preparations.js      ← 仕込み品用JS
+        ├── dishes.js            ← 商品用JS
+        ├── master.js            ← マスタ管理用JS
+        ├── courses.js           ← コース用JS
+        ├── menubook.js          ← メニューブック用JS
+        ├── recipebook.js        ← レシピブック用JS
+        ├── costCalculator.js    ← 原価計算共通関数
+        ├── businessType.js      ← 業態管理共通モジュール
+        ├── utils.js             ← 共通ユーティリティ
+        ├── supabase.js          ← Supabase接続
         └── style.css
 
-
   files:
+    # --- HTML ---
     - path: "index.html"
       purpose: "仕入れ商品一覧画面（トップページ）"
       imports: ["src/main.js"]
-
 
     - path: "import.html"
       purpose: "CSVインポート画面"
       imports: ["src/import.js"]
 
-
     - path: "items.html"
-      purpose: "アイテム一覧・登録画面（要確認フラグ対応）"
+      purpose: "アイテム一覧・登録画面"
       imports: ["src/items.js"]
 
-
     - path: "preparations.html"
-      purpose: "仕込み品一覧・登録画面（要確認フラグ対応）"
+      purpose: "仕込み品一覧・登録画面"
       imports: ["src/preparations.js"]
 
-
     - path: "dishes.html"
-      purpose: "商品一覧・登録画面（⚠️マーク対応）"
+      purpose: "商品一覧・登録画面"
       imports: ["src/dishes.js"]
 
-
     - path: "master.html"
-      purpose: "マスタ管理画面（税率設定対応済み）"
+      purpose: "マスタ管理画面"
       imports: ["src/master.js"]
 
-
     - path: "courses.html"
-      purpose: "コース一覧・登録画面（⚠️マーク対応）"
+      purpose: "コース一覧・登録画面"
       imports: ["src/courses.js"]
 
+    - path: "menubook.html"
+      purpose: "メニューブック（商品閲覧専用）"
+      imports: ["src/menubook.js"]
 
+    - path: "recipebook.html"
+      purpose: "レシピブック（仕込み品閲覧専用）"
+      imports: ["src/recipebook.js"]
+
+    # --- JavaScript ---
     - path: "src/main.js"
       purpose: "仕入れ商品一覧のメインロジック"
-
+      imports: ["src/supabase.js", "src/utils.js", "src/businessType.js"]
 
     - path: "src/import.js"
       purpose: "CSVインポートのロジック"
-
+      imports: ["src/supabase.js", "src/utils.js"]
 
     - path: "src/items.js"
-      purpose: "アイテム画面のロジック（要確認フラグ対応）"
-      imports: ["src/costCalculator.js", "src/businessType.js"]
-
+      purpose: "アイテム画面のロジック"
+      imports: ["src/supabase.js", "src/costCalculator.js", "src/businessType.js", "src/utils.js"]
 
     - path: "src/preparations.js"
-      purpose: "仕込み品画面のロジック（要確認フラグ・⚠️マーク対応）"
-      imports: ["src/costCalculator.js", "src/businessType.js"]
-
+      purpose: "仕込み品画面のロジック"
+      imports: ["src/supabase.js", "src/costCalculator.js", "src/businessType.js", "src/utils.js"]
 
     - path: "src/dishes.js"
-      purpose: "商品画面のロジック（⚠️マーク対応）"
-      imports: ["src/costCalculator.js", "src/businessType.js"]
-
+      purpose: "商品画面のロジック"
+      imports: ["src/supabase.js", "src/costCalculator.js", "src/businessType.js", "src/utils.js"]
 
     - path: "src/master.js"
-      purpose: "マスタ管理画面のロジック（税率設定対応済み）"
-      imports: ["src/businessType.js"]
-
+      purpose: "マスタ管理画面のロジック"
+      imports: ["src/supabase.js", "src/businessType.js"]
 
     - path: "src/courses.js"
-      purpose: "コース画面のロジック（⚠️マーク対応）"
-      imports: ["src/costCalculator.js", "src/businessType.js"]
+      purpose: "コース画面のロジック"
+      imports: ["src/supabase.js", "src/costCalculator.js", "src/businessType.js", "src/utils.js"]
 
+    - path: "src/menubook.js"
+      purpose: "メニューブック画面のロジック"
+      imports: ["src/supabase.js", "src/costCalculator.js", "src/businessType.js", "src/utils.js"]
 
+    - path: "src/recipebook.js"
+      purpose: "レシピブック画面のロジック"
+      imports: ["src/supabase.js", "src/costCalculator.js", "src/businessType.js", "src/utils.js"]
+
+    # --- 共通モジュール ---
     - path: "src/costCalculator.js"
-      purpose: "原価計算の共通関数（calculateItemUnitCost, calculatePreparationCost, calculateDishCost, getIngredientUnitCost）"
-
+      purpose: "原価計算の共通関数"
+      exports:
+        - "calculateItemUnitCost"
+        - "calculatePreparationCost"
+        - "calculateDishCost"
+        - "getIngredientUnitCost"
 
     - path: "src/businessType.js"
-      purpose: "業態管理の共通モジュール（initBusinessTypeSelector, getCurrentBusinessTypeId, setCurrentBusinessTypeId, clearBusinessTypesCache）"
+      purpose: "業態管理の共通モジュール"
+      exports:
+        - "initBusinessTypeSelector"
+        - "getCurrentBusinessTypeId"
+        - "setCurrentBusinessTypeId"
+        - "clearBusinessTypesCache"
 
+    - path: "src/utils.js"
+      purpose: "共通ユーティリティ関数"
+      exports:
+        - "toHalfWidthKatakana"
+        - "toFullWidthKatakana"
+        - "sanitizeToFullWidthKatakana"
+        - "normalizeForSearch"
+        - "getIngredientName"
+        - "getIngredientUnit"
+        - "prepHasNeedsReviewIngredient"
+        - "dishHasNeedsReviewIngredient"
+        - "getNeedsReviewIngredientList"
+        - "loadTaxRate"
+        - "readFileAsShiftJIS"
+        - "parseCSV"
+        - "findColumnIndex"
+        - "fetchAllWithPaging"
+        - "withBusinessTypeFilter"
+        - "IngredientModalManager"
+        - "QuickItemModalManager"
+        - "renderIngredientList"
+        - "renderIngredientTree"
 
     - path: "src/supabase.js"
       purpose: "Supabase接続設定"
+      exports: ["supabase"]
 
+    # --- ドキュメント ---
+    - path: "prompt/SYSTEM_PROMPT.yaml"
+      purpose: "AI振る舞い・汎用ルール（全プロジェクト共通）"
+
+    - path: "prompt/PROJECT_SPECIFIC.yaml"
+      purpose: "プロジェクト固有の設定・仕様"
+
+    - path: "prompt/WORKFLOW.yaml"
+      purpose: "進捗・決定事項・ファイル構成"
 
     - path: "prompt/DATABASE.md"
       purpose: "データベース設計ドキュメント"
 
-
 # =====================================
-# 6. 環境変数
-# =====================================
-environment_variables:
-  local:
-    - name: "VITE_SUPABASE_URL"
-    - name: "VITE_SUPABASE_ANON_KEY"
-
-
-# =====================================
-# 7. 注意点・ハマったこと
+# 5. 注意点・ハマったこと
 # =====================================
 cautions:
   discovered:
@@ -784,399 +565,120 @@ cautions:
       issue: "TailwindCSS v4でh-[80vh]などの任意値が効かない"
       solution: "インラインスタイル（style属性）で直接指定"
 
-
     - id: "C007"
       issue: "モーダルの中にモーダルを開くと、z-indexで裏に隠れる"
       solution: "子モーダルを開くときに親モーダルを一時的に隠す"
-
 
     - id: "C008"
       issue: "flex-1とoverflow-y-autoでスクロールが効かない"
       solution: "min-height: 0をインラインスタイルで指定"
 
-
     - id: "C009"
       issue: "preparationsテーブルにpreparation_kanaカラムがなかった"
       solution: "ALTER TABLE preparations ADD COLUMN preparation_kana TEXT;"
-
 
     - id: "C010"
       issue: "読み仮名に漢字が入力できてしまう"
       solution: "sanitizeToFullWidthKatakana関数で除去"
 
-
     - id: "C011"
       issue: "読み仮名のinputイベントでリアルタイム制限するとIME変換が妨害される"
       solution: "blurイベント（フォーカスが外れたとき）に変換する方式に変更"
-
 
     - id: "C012"
       issue: "仕込み品の原価計算で再帰が必要（仕込み品が仕込み品を材料にするケース）"
       solution: "costCalculator.jsで循環参照検出付きの再帰計算を実装"
 
-
     - id: "C013"
       issue: "既存のジャンル・セクションを削除しようとするとFK制約エラー"
       solution: "削除ではなくUPDATEで業態1に紐づけてから他業態にコピー"
 
+    - id: "C014"
+      issue: "main.jsにCSVインポート関連のDOM取得があり、index.htmlで読み込むとエラー"
+      solution: "main.jsからCSVインポート関連のコードを削除（import.jsに任せる）"
+
+    - id: "C015"
+      issue: "リファクタリング時にローカル関数を削除したが呼び出し側が残っていた"
+      solution: "getIngredientUnitCostLocal関数を追加、hasNeedsReviewIngredientをprepHasNeedsReviewIngredientに修正"
+
+    - id: "C016"
+      issue: "dishes.jsでhasNeedsReviewIngredient(dish)が未定義だった"
+      solution: "dishHasNeedsReviewIngredient(dish, allItems, allPreparations)に修正"
+
+    - id: "C017"
+      issue: "アコーディオンで親要素のmax-heightが子要素展開に追従しない"
+      solution: "開いた後にmax-height: noneにする方式に変更"
+
+    - id: "C018"
+      issue: "入れ子のアコーディオンで深い階層が展開されると親が見切れる"
+      solution: "展開完了後にmax-height: noneを設定して自動伸縮に対応"
+
+    - id: "C019"
+      issue: "renderIngredientTree修正時に仕込み品の子要素コンテナが消えて孫要素が開けなくなった"
+      solution: "仕込み品の行のHTMLで後半部分（ing-prep-children、ing-prep-close-btn）が欠落していたので復元"
+
+    - id: "C020"
+      issue: "仕入れ商品の使用フラグ・業者の非表示フラグが全業態で共通だった"
+      solution: "中間テーブル（product_business_types, supplier_business_types）で業態ごとに管理"
 
   reminders:
     - "DBに変更を加えたらDATABASE.mdを更新する"
-    - "1000件超えるテーブルはページング取得（while + range）"
+    - "1000件超えるテーブルはfetchAllWithPaging()を使う"
     - "TailwindCSS v4で任意値が効かない場合はインラインスタイル"
     - "新しい画面を追加したら全HTMLのサイドメニューを更新"
     - "読み仮名の制限はinputではなくblurイベントで行う"
     - "原価計算はcostCalculator.jsの共通関数を使う（DBには保存しない）"
     - "業態関連のデータ登録時はgetCurrentBusinessTypeId()で業態IDを取得"
-    - "全業態共通の項目（settings、products、suppliers）を変更する際は「この変更は全業態に反映されます」の確認メッセージを出す"
-    - "共通項目には「共通」タグ（オレンジ色のバッジ）を表示する"
+    - "業態フィルタはwithBusinessTypeFilter()を使う"
+    - "全業態共通の項目を変更する際は確認メッセージを出す"
     - "コースの売価は税込、商品の売価は税抜なので注意"
     - "要確認フラグはitems, preparationsのみ、商品・コースは材料の状態から判断"
-    - "⚠️マーク表示は編集ページのみ、閲覧専用ページには出さない"
-
+    - "⚠️マーク表示は編集ページのみ"
+    - "削除前は必ずDBで参照チェック"
+    - "仕入れ商品検索はnormalizeForSearch()で正規化してから比較"
+    - "共通関数はutils.jsからimportして使う"
+    - "リファクタリング時はローカル関数の呼び出し箇所を全て確認する"
+    - "材料選択モーダルはIngredientModalManagerクラスを使う"
+    - "クイックアイテム作成はQuickItemModalManagerクラスを使う"
+    - "材料リスト表示はrenderIngredientList関数を使う"
+    - "閲覧ページの材料ツリー表示はrenderIngredientTree関数を使う"
+    - "アコーディオン展開後はmax-height: noneにして子要素の展開に対応"
+    - "renderIngredientTree修正時は仕込み品の行全体（子要素コンテナ含む）を確認"
+    - "仕入れ商品の使用フラグはproduct_business_typesテーブルで業態ごとに管理"
+    - "業者の非表示フラグはsupplier_business_typesテーブルで業態ごとに管理"
+    - "CSVインポート時・業態追加時は中間テーブルにレコードを自動作成する"
 
 # =====================================
-# 8. 未解決・保留事項
+# 6. 将来の拡張候補
 # =====================================
-pending_items:
-  unresolved: []
-  waiting_for_user: []
-  needs_research: []
-
-
-  settings_future_candidates:
+future_candidates:
+  settings_table:
     description: "settingsテーブルに将来追加する可能性がある項目"
     items:
       - key: "default_business_type_id"
         purpose: "ログイン時のデフォルト業態"
-        timing: "フェーズ2（認証追加時）"
+        timing: "認証追加時"
       - key: "items_per_page"
         purpose: "一覧の表示件数"
         timing: "必要になったら"
-      - key: "currency"
-        purpose: "通貨単位（円/ドル等）"
-        timing: "海外展開時？"
-      - key: "cost_decimal_places"
-        purpose: "原価の小数点以下桁数"
-        timing: "必要になったら"
 
-
-# =====================================
-# 9. セッション開始手順
-# =====================================
-session_start_procedure:
-  priority_order:
-    - rank: 1
-      check: "進捗YAMLの有無"
-      description: "セーブデータがあるかどうかが最優先"
-    - rank: 2
-      check: "ユーザーの発言内容"
-      description: "セーブデータがない場合のみ確認"
-
-
-  with_save_data:
-    trigger: "WORKFLOW.yaml が添付されている"
-    phases:
-      - phase: 1
-        name: "セーブデータ読み込み"
-        action:
-          - "WORKFLOW.yamlを解析"
-          - "SYSTEM_PROMPT.yamlを解析"
-          - "DATABASE.mdを解析（あれば）"
-        output: |
-          📂 セーブデータ読み込み完了
-          ━━━━━━━━━━━━━━━━━━━━
-          📍 現在地: {current_phase.name}
-          📋 状態: {current_phase.status}
-          📝 前回のメモ: {current_phase.notes}
-          ━━━━━━━━━━━━━━━━━━━━
-
-
-      - phase: 2
-        name: "必要ファイルの確認"
-        action:
-          - "current_taskを確認"
-          - "file_structureから関連ファイルを特定"
-          - "importsを辿って依存ファイルも特定"
-        output: |
-          📋 作業に必要なファイルを確認します
-          ━━━━━━━━━━━━━━━━━━━━
-          🎯 今回の作業: {current_task.description}
-          ━━━━━━━━━━━━━━━━━━━━
-          以下のファイルをアップロードしてください
-
-
-          【必須】
-          {required_files_list}
-
-
-          【あれば助かります】
-          {optional_files_list}
-
-
-      - phase: 3
-        name: "ファイル内容の確認"
-        trigger: "ユーザーがファイルをアップロード後"
-        checklist:
-          - "ファイルが開ける・読める"
-          - "想定した内容と一致している"
-          - "セーブデータ（file_structure）と整合している"
-        on_mismatch: |
-          ⚠️ 確認させてください
-          セーブデータと実際のファイルで違いがあります：
-          {mismatch_details}
-
-
-          どちらが正しいですか？
-          1️⃣ 実際のファイルが正（セーブデータを更新）
-          2️⃣ セーブデータが正（ファイルを修正）
-
-
-      - phase: 4
-        name: "作業開始確認"
-        required_before_start:
-          - "セーブデータ読み込み完了"
-          - "必要ファイル全て確認完了"
-          - "不整合があれば解消済み"
-        output: |
-          🚀 準備完了
-          ━━━━━━━━━━━━━━━━━━━━
-          📍 現在地: {current_phase.name}
-          🎯 今回の作業: {current_task.description}
-          📄 対象ファイル: {target_files}
-          ━━━━━━━━━━━━━━━━━━━━
-          この内容で作業開始してよいですか？
-        wait_for: "ユーザーのGOサイン"
-
-
-  without_save_data:
-    trigger: "WORKFLOW.yaml が添付されていない"
-    output: |
-      セーブデータがありません
-
-
-      🆕 はじめから → 新規プロジェクト開始
-      🔍 つづきから → 状況を教えてください
-
-
-      どちらですか？
-    responses:
-      if_new:
-        triggers: ["はじめから", "新規", "新しく", "最初から"]
-        action: "Step 0（環境構築）から開始"
-      if_continue:
-        triggers: ["つづきから", "続き", "途中から"]
-        action: "状況をヒアリングしてprogressを復元"
-
-
-  prohibited:
-    - "ファイルを見ずにコードを書く"
-    - "セーブデータだけ見て作業開始"
-    - "「たぶんこうなってる」で進める"
-    - "必要ファイルを聞かずに作業開始"
-
+  refactoring:
+    description: "残りのリファクタリング候補"
+    items:
+      - name: "Phase 4: UI操作の共通化"
+        details: "モーダル開閉、フィルターラジオ初期化など"
+        priority: "低"
 
 # =====================================
-# 10. 開発プロセス（Step0〜4）
+# 7. 現在のデータ状況
 # =====================================
-development_process:
-  step0_setup:
-    name: "環境構築フェーズ"
-    when: "新規プロジェクトの場合のみ"
-    checklist:
-      - step: 1
-        name: "Node.jsインストール"
-        completed: true
-      - step: 2
-        name: "VSCode設定"
-        completed: true
-      - step: 3
-        name: "Viteでプロジェクト作成"
-        completed: true
-      - step: 4
-        name: "TailwindCSS導入"
-        completed: true
-      - step: 5
-        name: "Supabaseプロジェクト作成"
-        completed: true
-      - step: 6
-        name: "Supabase接続設定"
-        completed: true
-      - step: 7
-        name: "Git初期化・最初のコミット"
-        completed: true
-      - step: 8
-        name: "GitHub連携"
-        completed: true
-      - step: 9
-        name: "Vercel連携"
-        completed: true
-    completion_check: "npm run devでローカル起動・Supabase接続確認"
-    on_complete: "progressを更新してStep 1へ移行"
-
-
-  step1_hearing:
-    name: "要件定義フェーズ"
-    golden_rule: "要件が固まるまでコードは書かない"
-    question_rules:
-      format: "一問一答形式"
-      questions_per_turn: 1
-      emphasis: "質問は必ず1個ずつ"
-    option_format:
-      options_count: 3
-      required_elements:
-        - "メリット"
-        - "デメリット"
-        - "推奨案と理由"
-    when_user_delegates:
-      trigger_phrases: ["お任せ", "任せる", "おまかせ"]
-      action: "推奨案を採用する前提で進める"
-    on_complete: "決定事項をdecisionsに追加してStep 2へ"
-
-
-  step2_agreement:
-    name: "合意形成フェーズ"
-    required_before_coding:
-      - "現状の認識・分析結果"
-      - "具体的な解決策・実装方針"
-      - "想定するファイル構成"
-    confirmation_required:
-      phrase: "この方針で実装を進めてよいですか？"
-      must_wait_for: "ユーザーのGOサイン"
-    on_complete: "file_structureを更新してStep 3へ"
-
-
-  step3_implementation:
-    name: "実装フェーズ"
-    output_rules:
-      declaration_before_code:
-        required_info:
-          - "対象ファイル名"
-          - "対象箇所"
-          - "変更種別（新規追加/置き換え/削除）"
-      one_file_at_a_time:
-        rule: "複数ファイル変更時も1つずつ出して動作確認してから次へ"
-      no_abbreviation:
-        prohibited_patterns:
-          - "// 既存コード"
-          - "// 省略"
-          - "// ..."
-        requirement: "コピペでそのまま動く完全なコードを提示"
-      success_check:
-        action: "コード渡した後「ここがこう動いたらOK」と教える"
-      impact_check:
-        procedure:
-          - "変更する箇所を特定"
-          - "その変更が影響する他の箇所を全部洗い出す"
-          - "影響先も含めて全部修正する"
-          - "修正漏れがないか確認してから渡す"
-        rule: "影響あると伝えるだけではなく修正まで責任持つ"
-    on_file_change: "file_structureを更新"
-
-
-  step4_debug:
-    name: "デバッグ・問題解決フェーズ"
-    golden_rule: "いきなりコード書かない"
-    debug_flow:
-      - step: 1
-        name: "状況整理"
-        action: "何が起きているか整理する"
-      - step: 2
-        name: "仮説立案"
-        action: "原因の仮説を立てる"
-      - step: 3
-        name: "検証方法の提示"
-        action: "ログ追加などの検証コードを出す"
-        note: "この時点では修正コードは出さない"
-      - step: 4
-        name: "ユーザーが検証実行"
-        action: "ユーザーに検証してもらう"
-      - step: 5
-        name: "結果分析・原因特定"
-        action: "ログ結果から原因を断定"
-      - step: 6
-        name: "修正許可を取る"
-        action: "「この方針で直してよいですか？」と確認"
-      - step: 7
-        name: "修正コード提示"
-        action: "許可が出てからコードを書く"
-    prohibited:
-      - "いきなり修正コードを出す"
-      - "仮説だけで勝手に修正"
-      - "当てずっぽうの修正"
-    on_complete: "解決内容を記録してStep 3に戻る"
-
-
-# =====================================
-# 11. 進捗更新ルール
-# =====================================
-progress_update_rules:
-  when_to_update:
-    - trigger: "フェーズ完了時"
-      action: "completed_phasesに追加、current_phaseを更新"
-    - trigger: "重要な決定事項が出たとき"
-      action: "decisionsに追加"
-    - trigger: "ファイルを追加/変更したとき"
-      action: "file_structureを更新"
-    - trigger: "保留事項が発生したとき"
-      action: "pending_itemsに追加"
-    - trigger: "セッション終了時"
-      action: "last_updatedを更新、現在の状態をまとめる"
-    - trigger: "DBに変更を加えたとき"
-      action: "DATABASE.mdを更新"
-    - trigger: "機能の実装が完了したとき"
-      action: "ユーザーに「この機能完了でいいですか？」と確認してからfeaturesのstatusをdoneに更新"
-
-
-  save_output:
-    instruction: "セーブ時は更新後のYAML全体を出力する"
-    message: |
-      💾 セーブデータを更新しました
-      ━━━━━━━━━━━━━━━━━━━━
-      📍 現在地: {current_phase.name}
-      ✅ 完了済み: {completed_phases_count}
-      📝 決定事項: {decisions_count}件
-      ⚠️ 注意点: {cautions_count}件
-      ━━━━━━━━━━━━━━━━━━━━
-      以下のYAMLを保存してください
-
-
-# =====================================
-# 12. 開発の流れまとめ
-# =====================================
-workflow_summary:
-  initial_setup:
-    description: "Step 0完了後の運用"
-    flow:
-      - "ローカルで開発（npm run dev）"
-      - "区切りついたらWORKFLOW.yaml / DATABASE.md を更新"
-      - "git add . → git commit → git push"
-      - "Vercelが自動デプロイ"
-    important: "⚠️ yaml/md更新してからgit pushが鉄則！"
-
-
-  next_session:
-    description: "次回の開発再開時"
-    what_to_provide:
-      - "SYSTEM_PROMPT.yaml"
-      - "WORKFLOW.yaml（進捗情報入り）"
-      - "DATABASE.md（あれば）"
-    result: "Rinaがprogressセクションを読んで続きからサポート"
-
-
-  session_end:
-    description: "セッション終了時"
-    action: "Rinaが更新後のセーブデータを出力する"
-    user_action: "YAMLを保存しておく"
-
-
-# =====================================
-# 13. 業態データ
-# =====================================
-business_types:
-  - business_type_id: 1
-    business_type_name: "アジアンビストロ"
-  - business_type_id: 2
-    business_type_name: "スパニッシュイタリアン"
-  - business_type_id: 3
-    business_type_name: "炭焼き 大"
+current_data:
+  business_types:
+    description: "現在DBに登録されている業態"
+    data:
+      - business_type_id: 1
+        business_type_name: "アジアンビストロ"
+      - business_type_id: 2
+        business_type_name: "スパニッシュイタリアン"
+      - business_type_id: 3
+        business_type_name: "炭焼き 大"

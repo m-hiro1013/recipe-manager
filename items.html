@@ -122,6 +122,22 @@
                     </a>
                 </li>
                 <li class="pt-4 border-t border-gray-700 mt-4">
+                    <a href="/menubook.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="メニューブック">
+                        <span class="flex-shrink-0">📖</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">メニューブック</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/recipebook.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="レシピブック">
+                        <span class="flex-shrink-0">📗</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">レシピブック</span>
+                    </a>
+                </li>
+                <li class="pt-4 border-t border-gray-700 mt-4">
                     <a href="/master.html"
                         class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
                         title="マスタ管理">
@@ -379,10 +395,17 @@
                 <input type="hidden" id="editItemId" />
                 <input type="hidden" id="editProductPrice" />
 
-                <!-- 仕入れ商品（表示のみ） -->
+                <!-- 仕入れ商品 -->
                 <div class="mb-6">
                     <label class="block text-sm font-bold text-gray-700 mb-2">仕入れ商品</label>
-                    <p id="editProductInfo" class="p-3 bg-gray-100 rounded-lg text-gray-700"></p>
+                    <div class="flex gap-2">
+                        <p id="editProductInfo" class="flex-1 p-3 bg-gray-100 rounded-lg text-gray-700"></p>
+                        <button type="button" id="openEditProductSelectModal"
+                            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-bold hover:bg-gray-300 transition-colors flex-shrink-0">
+                            変更
+                        </button>
+                    </div>
+                    <input type="hidden" id="editProductCode" />
                 </div>
                 <!-- ジャンル選択 -->
                 <div class="mb-6">

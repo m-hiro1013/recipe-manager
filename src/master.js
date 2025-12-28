@@ -733,6 +733,7 @@ async function saveBusinessType() {
     submitBusinessTypeBtn.textContent = '保存中...'
 
     if (id) {
+        // 編集
         const { error } = await supabase
             .from('business_types')
             .update({
@@ -749,12 +750,15 @@ async function saveBusinessType() {
             return
         }
     } else {
-        const { error } = await supabase
+        // 新規作成
+        const { data: newBusinessType, error } = await supabase
             .from('business_types')
             .insert({
                 business_type_name: name,
                 sort_order: sortOrder
             })
+            .select()
+            .single()
 
         if (error) {
             console.error('業態作成エラー:', error)
@@ -762,6 +766,59 @@ async function saveBusinessType() {
             submitBusinessTypeBtn.disabled = false
             submitBusinessTypeBtn.textContent = '保存'
             return
+        }
+
+        // ========================================
+        // 新規業態用の中間テーブルレコードを作成
+        // ========================================
+        const newBusinessTypeId = newBusinessType.business_type_id
+
+        // 全商品を取得
+        const { data: allProducts, error: productsError } = await supabase
+            .from('products')
+            .select('product_code')
+
+        if (productsError) {
+            console.error('商品取得エラー:', productsError)
+        } else if (allProducts && allProducts.length > 0) {
+            // 商品 × 新業態 の中間テーブルレコードを作成
+            const productBusinessTypes = allProducts.map(p => ({
+                product_code: p.product_code,
+                business_type_id: newBusinessTypeId,
+                is_active: false
+            }))
+
+            const { error: pbtError } = await supabase
+                .from('product_business_types')
+                .insert(productBusinessTypes)
+
+            if (pbtError) {
+                console.error('商品×業態の中間テーブル登録エラー:', pbtError)
+            }
+        }
+
+        // 全業者を取得
+        const { data: allSuppliers, error: suppliersError } = await supabase
+            .from('suppliers')
+            .select('supplier_name')
+
+        if (suppliersError) {
+            console.error('業者取得エラー:', suppliersError)
+        } else if (allSuppliers && allSuppliers.length > 0) {
+            // 業者 × 新業態 の中間テーブルレコードを作成
+            const supplierBusinessTypes = allSuppliers.map(s => ({
+                supplier_name: s.supplier_name,
+                business_type_id: newBusinessTypeId,
+                is_hidden: false
+            }))
+
+            const { error: sbtError } = await supabase
+                .from('supplier_business_types')
+                .insert(supplierBusinessTypes)
+
+            if (sbtError) {
+                console.error('業者×業態の中間テーブル登録エラー:', sbtError)
+            }
         }
     }
 

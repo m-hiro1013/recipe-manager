@@ -1,12 +1,10 @@
 import { supabase } from './supabase.js'
+import { toFullWidthKatakana, normalizeForSearch, fetchAllWithPaging } from './utils.js'
+import { initBusinessTypeSelector, getCurrentBusinessTypeId } from './businessType.js'
 
 // ============================================
 // DOM要素の取得
 // ============================================
-const csvFileInput = document.getElementById('csvFile')
-const importBtn = document.getElementById('importBtn')
-const resultArea = document.getElementById('resultArea')
-const resultMessage = document.getElementById('resultMessage')
 const searchInput = document.getElementById('searchInput')
 const supplierFilter = document.getElementById('supplierFilter')
 const productList = document.getElementById('productList')
@@ -19,8 +17,8 @@ const hiddenModal = document.getElementById('hiddenModal')
 const closeHiddenModal = document.getElementById('closeHiddenModal')
 const hiddenList = document.getElementById('hiddenList')
 const hiddenCount = document.getElementById('hiddenCount')
-const detailViewBtn = document.getElementById('detailViewBtn') // ← 追加！
-const compactViewBtn = document.getElementById('compactViewBtn') // ← 追加！
+const detailViewBtn = document.getElementById('detailViewBtn')
+const compactViewBtn = document.getElementById('compactViewBtn')
 
 // ============================================
 // 状態管理
@@ -29,16 +27,20 @@ let allProducts = []
 let allSuppliers = []
 let selectedSuppliers = new Set()
 let searchQuery = ''
-let activeFilter = 'all' // 'off', 'on', 'all' ← 'off' を 'all' に変更！
+let activeFilter = 'all'
 let currentPage = 1
 const perPage = 100
-let viewMode = 'detail' // 'detail', 'compact' ← これ追加！
-let expandedSupplier = null // コンパクト表示で展開中の業者名 ← これ追加！
+let viewMode = 'detail'
+let expandedSupplier = null
 
 // ============================================
 // 初期化
 // ============================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // 業態セレクタを初期化（変更時にデータ再読み込み）
+  await initBusinessTypeSelector(() => {
+    loadData()
+  })
   loadData()
 })
 
@@ -48,43 +50,36 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadData() {
   productList.innerHTML = '<p class="text-center text-gray-500 py-8">読み込み中...</p>'
 
-  // 商品データ取得（ページングで全件取得）
-  let allProductsData = []
-  let from = 0
-  const batchSize = 1000
-
-  while (true) {
-    const { data: products, error: productsError } = await supabase
-      .from('products')
-      .select('*')
-      .order('supplier_name', { ascending: true })
-      .range(from, from + batchSize - 1)
-
-    if (productsError) {
-      console.error('商品データ取得エラー:', productsError)
-      productList.innerHTML = '<p class="text-center text-red-500 py-8">データの取得に失敗しました</p>'
-      return
-    }
-
-    allProductsData = allProductsData.concat(products)
-
-    // 取得件数がbatchSize未満なら最後のページ
-    if (products.length < batchSize) {
-      break
-    }
-
-    from += batchSize
+  const businessTypeId = getCurrentBusinessTypeId()
+  if (!businessTypeId) {
+    productList.innerHTML = '<p class="text-center text-red-500 py-8">業態を選択してください</p>'
+    return
   }
 
-  // ★★★ デバッグ用ログ（確認後に消してOK） ★★★
-  console.log('=== 全体確認 ===')
-  console.log('取得した商品数:', allProductsData.length)
-  // ★★★ ここまで ★★★
+  // 商品データ取得（productsとproduct_business_typesをJOIN）
+  const { data: allProductsData, error: productsError } = await fetchAllWithPaging(
+    'products',
+    '*, product_business_types!inner(is_active)',
+    {
+      orderColumn: 'supplier_name',
+      ascending: true,
+      filters: [
+        { column: 'product_business_types.business_type_id', value: businessTypeId }
+      ]
+    }
+  )
 
-  // 取引先データ取得
+  if (productsError) {
+    productList.innerHTML = '<p class="text-center text-red-500 py-8">データの取得に失敗しました</p>'
+    console.error('商品取得エラー:', productsError)
+    return
+  }
+
+  // 取引先データ取得（suppliersとsupplier_business_typesをJOIN）
   const { data: suppliers, error: suppliersError } = await supabase
     .from('suppliers')
-    .select('*')
+    .select('*, supplier_business_types!inner(is_hidden)')
+    .eq('supplier_business_types.business_type_id', businessTypeId)
     .order('supplier_name', { ascending: true })
 
   if (suppliersError) {
@@ -92,11 +87,19 @@ async function loadData() {
     return
   }
 
-  allProducts = allProductsData
-  allSuppliers = suppliers
+  // データを整形（JOINした結果をフラットに）
+  allProducts = allProductsData.map(p => ({
+    ...p,
+    is_active: p.product_business_types?.[0]?.is_active ?? false
+  }))
+
+  allSuppliers = suppliers.map(s => ({
+    ...s,
+    is_hidden: s.supplier_business_types?.[0]?.is_hidden ?? false
+  }))
 
   // 表示中の取引先を選択（非表示でないもの）
-  const visibleSuppliers = suppliers.filter(s => !s.is_hidden).map(s => s.supplier_name)
+  const visibleSuppliers = allSuppliers.filter(s => !s.is_hidden).map(s => s.supplier_name)
   selectedSuppliers = new Set(visibleSuppliers)
 
   updateHiddenCount()
@@ -157,7 +160,11 @@ function renderProducts() {
     // 取引先フィルター
     if (!selectedSuppliers.has(p.supplier_name)) return false
     // 検索フィルター
-    if (searchQuery && !p.product_name.includes(searchQuery)) return false
+    if (searchQuery) {
+      const normalizedQuery = normalizeForSearch(searchQuery)
+      const normalizedName = normalizeForSearch(p.product_name)
+      if (!normalizedName.includes(normalizedQuery) && !p.product_name.includes(searchQuery)) return false
+    }
     // 使用フラグフィルター
     if (activeFilter === 'on' && !p.is_active) return false
     if (activeFilter === 'off' && p.is_active) return false
@@ -184,7 +191,11 @@ function renderProducts() {
   }
 
   // 五十音順でソート
-  const sortedSuppliers = Object.keys(grouped).sort((a, b) => a.localeCompare(b, 'ja'))
+  let sortedSuppliers = Object.keys(grouped).sort((a, b) => a.localeCompare(b, 'ja'))
+  // 検索中は商品0件の業者を除外
+  if (searchQuery) {
+    sortedSuppliers = sortedSuppliers.filter(supplier => grouped[supplier].length > 0)
+  }
 
   // コンパクト表示の場合はページネーションなし
   if (viewMode === 'compact') {
@@ -424,10 +435,13 @@ function renderProducts() {
 // 使用フラグ更新（単体）
 // ============================================
 async function updateActiveFlag(productCode, isActive) {
+  const businessTypeId = getCurrentBusinessTypeId()
+
   const { error } = await supabase
-    .from('products')
+    .from('product_business_types')
     .update({ is_active: isActive })
     .eq('product_code', productCode)
+    .eq('business_type_id', businessTypeId)
 
   if (error) {
     console.error('フラグ更新エラー:', error)
@@ -447,10 +461,20 @@ async function updateActiveFlag(productCode, isActive) {
 // 業者の商品を一括ON/OFF
 // ============================================
 async function bulkUpdateSupplierProducts(supplierName, isActive) {
+  const businessTypeId = getCurrentBusinessTypeId()
+
+  // この業者の商品コード一覧を取得
+  const productCodes = allProducts
+    .filter(p => p.supplier_name === supplierName)
+    .map(p => p.product_code)
+
+  if (productCodes.length === 0) return
+
   const { error } = await supabase
-    .from('products')
+    .from('product_business_types')
     .update({ is_active: isActive })
-    .eq('supplier_name', supplierName)
+    .in('product_code', productCodes)
+    .eq('business_type_id', businessTypeId)
 
   if (error) {
     console.error('一括更新エラー:', error)
@@ -472,10 +496,13 @@ async function bulkUpdateSupplierProducts(supplierName, isActive) {
 // 業者を非表示
 // ============================================
 async function hideSupplier(supplierName) {
+  const businessTypeId = getCurrentBusinessTypeId()
+
   const { error } = await supabase
-    .from('suppliers')
+    .from('supplier_business_types')
     .update({ is_hidden: true })
     .eq('supplier_name', supplierName)
+    .eq('business_type_id', businessTypeId)
 
   if (error) {
     console.error('非表示更新エラー:', error)
@@ -499,10 +526,13 @@ async function hideSupplier(supplierName) {
 // 業者を表示に戻す
 // ============================================
 async function showSupplier(supplierName) {
+  const businessTypeId = getCurrentBusinessTypeId()
+
   const { error } = await supabase
-    .from('suppliers')
+    .from('supplier_business_types')
     .update({ is_hidden: false })
     .eq('supplier_name', supplierName)
+    .eq('business_type_id', businessTypeId)
 
   if (error) {
     console.error('表示更新エラー:', error)
@@ -651,8 +681,6 @@ closeHiddenModal.addEventListener('click', () => {
   hiddenModal.classList.add('hidden')
 })
 
-
-
 // 表示モード切り替え
 detailViewBtn.addEventListener('click', () => {
   viewMode = 'detail'
@@ -671,198 +699,3 @@ compactViewBtn.addEventListener('click', () => {
   detailViewBtn.classList.add('bg-white', 'text-gray-700', 'hover:bg-gray-50')
   renderProducts()
 })
-
-// ============================================
-// CSVインポート機能
-// ============================================
-importBtn.addEventListener('click', async () => {
-  const file = csvFileInput.files[0]
-
-  if (!file) {
-    showResult('error', 'ファイルを選択してください')
-    return
-  }
-
-  importBtn.disabled = true
-  importBtn.textContent = 'インポート中...'
-
-  try {
-    const text = await readFileAsShiftJIS(file)
-    const rows = parseCSV(text)
-
-    const headerRow = rows[1]
-    const dataRows = rows.slice(2)
-
-    const columnIndexes = {
-      productCode: findColumnIndex(headerRow, '商品システムコード'),
-      productName: findColumnIndex(headerRow, '商品名'),
-      specification: findColumnIndex(headerRow, '規格'),
-      unitPrice: findColumnIndex(headerRow, '単価'),
-      supplierName: findColumnIndex(headerRow, '取引先名'),
-      updatedAt: findColumnIndex(headerRow, '更新日')
-    }
-
-    const requiredColumns = ['productCode', 'productName', 'specification', 'unitPrice', 'supplierName', 'updatedAt']
-    const columnNameMap = {
-      productCode: '商品システムコード',
-      productName: '商品名',
-      specification: '規格',
-      unitPrice: '単価',
-      supplierName: '取引先名',
-      updatedAt: '更新日'
-    }
-
-    for (const key of requiredColumns) {
-      if (columnIndexes[key] === -1) {
-        throw new Error(`必要な列「${columnNameMap[key]}」が見つかりません`)
-      }
-    }
-
-    const allProductsFromCSV = dataRows
-      .filter(row => row[columnIndexes.productCode])
-      .map(row => ({
-        product_code: row[columnIndexes.productCode],
-        product_name: row[columnIndexes.productName],
-        specification: row[columnIndexes.specification],
-        unit_price: parseFloat(row[columnIndexes.unitPrice]) || 0,
-        supplier_name: row[columnIndexes.supplierName],
-        updated_at_csv: row[columnIndexes.updatedAt]
-      }))
-
-    const productMap = new Map()
-    for (const product of allProductsFromCSV) {
-      const existing = productMap.get(product.product_code)
-      if (!existing || product.updated_at_csv > existing.updated_at_csv) {
-        productMap.set(product.product_code, product)
-      }
-    }
-
-    const products = Array.from(productMap.values()).map(p => ({
-      product_code: p.product_code,
-      product_name: p.product_name,
-      specification: p.specification,
-      unit_price: p.unit_price,
-      supplier_name: p.supplier_name
-    }))
-
-    // 商品をupsert
-    const { error: productsError } = await supabase
-      .from('products')
-      .upsert(products, {
-        onConflict: 'product_code',
-        ignoreDuplicates: false
-      })
-
-    if (productsError) {
-      throw productsError
-    }
-
-    // 取引先を抽出してupsert
-    const supplierNames = [...new Set(products.map(p => p.supplier_name).filter(Boolean))]
-    const suppliersToUpsert = supplierNames.map(name => ({ supplier_name: name }))
-
-    const { error: suppliersError } = await supabase
-      .from('suppliers')
-      .upsert(suppliersToUpsert, {
-        onConflict: 'supplier_name',
-        ignoreDuplicates: true
-      })
-
-    if (suppliersError) {
-      console.error('取引先登録エラー:', suppliersError)
-    }
-
-    showResult('success', `✅ ${products.length}件のインポートが完了しました！`)
-
-    await loadData()
-
-  } catch (error) {
-    console.error('インポートエラー:', error)
-    showResult('error', `❌ エラー: ${error.message}`)
-  } finally {
-    importBtn.disabled = false
-    importBtn.textContent = 'インポート実行'
-  }
-
-})
-
-// ============================================
-// ユーティリティ関数
-// ============================================
-function readFileAsShiftJIS(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = (e) => resolve(e.target.result)
-    reader.onerror = (e) => reject(e)
-    reader.readAsText(file, 'Shift_JIS')
-  })
-}
-
-function parseCSV(text) {
-  const rows = []
-  let currentRow = []
-  let currentField = ''
-  let inQuotes = false
-
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i]
-    const nextChar = text[i + 1]
-
-    if (inQuotes) {
-      if (char === '"' && nextChar === '"') {
-        currentField += '"'
-        i++
-      } else if (char === '"') {
-        inQuotes = false
-      } else {
-        currentField += char
-      }
-    } else {
-      if (char === '"') {
-        inQuotes = true
-      } else if (char === ',') {
-        currentRow.push(currentField.trim())
-        currentField = ''
-      } else if (char === '\r' && nextChar === '\n') {
-        currentRow.push(currentField.trim())
-        rows.push(currentRow)
-        currentRow = []
-        currentField = ''
-        i++
-      } else if (char === '\n') {
-        currentRow.push(currentField.trim())
-        rows.push(currentRow)
-        currentRow = []
-        currentField = ''
-      } else {
-        currentField += char
-      }
-    }
-  }
-
-  if (currentField || currentRow.length > 0) {
-    currentRow.push(currentField.trim())
-    rows.push(currentRow)
-  }
-
-  return rows
-}
-
-function findColumnIndex(headerRow, columnName) {
-  return headerRow.findIndex(cell => {
-    const cleaned = cell.replace(/^\[/, '').replace(/\]$/, '')
-    return cleaned === columnName
-  })
-}
-
-function showResult(type, message) {
-  resultArea.classList.remove('hidden')
-
-  if (type === 'success') {
-    resultMessage.className = 'p-4 rounded-md bg-green-100 text-green-800'
-  } else {
-    resultMessage.className = 'p-4 rounded-md bg-red-100 text-red-800'
-  }
-
-  resultMessage.textContent = message
-}

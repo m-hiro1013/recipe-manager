@@ -1,6 +1,7 @@
 import { supabase } from './supabase.js'
 import { calculateDishCost, getIngredientUnitCost } from './costCalculator.js'
 import { initBusinessTypeSelector, getCurrentBusinessTypeId } from './businessType.js'
+import { toHalfWidthKatakana, sanitizeToFullWidthKatakana, dishHasNeedsReviewIngredient, getNeedsReviewIngredientList, loadTaxRate, withBusinessTypeFilter } from './utils.js'
 
 // ============================================
 // DOM要素の取得
@@ -180,41 +181,52 @@ function setupEventListeners() {
         })
     })
 }
-
 // ============================================
-// 税率を取得
+// コースに要確認商品が含まれるかチェック
 // ============================================
-async function loadTaxRate() {
-    const { data, error } = await supabase
-        .from('settings')
-        .select('setting_value')
-        .eq('setting_key', 'tax_rate')
-        .single()
+function courseHasNeedsReviewDish(course) {
+    if (!course.course_items) return false
 
-    if (error) {
-        console.error('税率取得エラー:', error)
-        return
+    for (const item of course.course_items) {
+        const dish = allDishes.find(d => d.dish_id === item.dish_id)
+        if (dishHasNeedsReviewIngredient(dish, allItems, allPreparations)) return true
     }
-
-    if (data) {
-        taxRate = parseFloat(data.setting_value) || 10
-    }
+    return false
 }
 
+// ============================================
+// 要確認の材料リストを取得（コース用）
+// ============================================
+function getNeedsReviewListForCourse(course) {
+    const reviewList = []
+    if (!course.course_items) return reviewList
+
+    for (const item of course.course_items) {
+        const dish = allDishes.find(d => d.dish_id === item.dish_id)
+        if (dish?.dish_ingredients) {
+            const dishReviewList = getNeedsReviewIngredientList(dish.dish_ingredients, allItems, allPreparations)
+            for (const r of dishReviewList) {
+                if (!reviewList.includes(r)) {
+                    reviewList.push(r)
+                }
+            }
+        }
+    }
+    return reviewList
+}
 // ============================================
 // データ読み込み
 // ============================================
 async function loadData() {
     courseList.innerHTML = '<p class="text-center text-gray-500 py-8">読み込み中...</p>'
 
-    await loadTaxRate()
+    taxRate = await loadTaxRate()
 
     const businessTypeId = getCurrentBusinessTypeId()
 
     // コース一覧を取得
-    let coursesQuery = supabase
-        .from('courses')
-        .select(`
+    const { data: courses, error: courseError } = await withBusinessTypeFilter(
+        supabase.from('courses').select(`
             *,
             course_items (
                 id,
@@ -222,14 +234,9 @@ async function loadData() {
                 portion,
                 sort_order
             )
-        `)
-        .order('sort_order', { ascending: true })
-
-    if (businessTypeId) {
-        coursesQuery = coursesQuery.eq('business_type_id', businessTypeId)
-    }
-
-    const { data: courses, error: courseError } = await coursesQuery
+        `).order('sort_order', { ascending: true }),
+        businessTypeId
+    )
 
     if (courseError) {
         console.error('コース取得エラー:', courseError)
@@ -238,9 +245,8 @@ async function loadData() {
     }
 
     // 商品一覧を取得
-    let dishesQuery = supabase
-        .from('dishes')
-        .select(`
+    const { data: dishes, error: dishError } = await withBusinessTypeFilter(
+        supabase.from('dishes').select(`
             *,
             dish_ingredients (
                 id,
@@ -248,14 +254,9 @@ async function loadData() {
                 ingredient_id,
                 quantity
             )
-        `)
-        .order('dish_kana', { ascending: true })
-
-    if (businessTypeId) {
-        dishesQuery = dishesQuery.eq('business_type_id', businessTypeId)
-    }
-
-    const { data: dishes, error: dishError } = await dishesQuery
+        `).order('dish_kana', { ascending: true }),
+        businessTypeId
+    )
 
     if (dishError) {
         console.error('商品取得エラー:', dishError)
@@ -263,22 +264,17 @@ async function loadData() {
     }
 
     // アイテム一覧を取得
-    let itemsQuery = supabase
-        .from('items')
-        .select(`
+    const { data: items, error: itemsError } = await withBusinessTypeFilter(
+        supabase.from('items').select(`
             *,
             products (
                 product_name,
                 supplier_name,
                 unit_price
             )
-        `)
-
-    if (businessTypeId) {
-        itemsQuery = itemsQuery.eq('business_type_id', businessTypeId)
-    }
-
-    const { data: items, error: itemsError } = await itemsQuery
+        `),
+        businessTypeId
+    )
 
     if (itemsError) {
         console.error('アイテム取得エラー:', itemsError)
@@ -286,9 +282,8 @@ async function loadData() {
     }
 
     // 仕込み品一覧を取得
-    let prepQuery = supabase
-        .from('preparations')
-        .select(`
+    const { data: preparations, error: prepError } = await withBusinessTypeFilter(
+        supabase.from('preparations').select(`
             *,
             preparation_ingredients (
                 id,
@@ -296,13 +291,9 @@ async function loadData() {
                 ingredient_id,
                 quantity
             )
-        `)
-
-    if (businessTypeId) {
-        prepQuery = prepQuery.eq('business_type_id', businessTypeId)
-    }
-
-    const { data: preparations, error: prepError } = await prepQuery
+        `),
+        businessTypeId
+    )
 
     if (prepError) {
         console.error('仕込み品取得エラー:', prepError)
@@ -326,49 +317,7 @@ function updateStats() {
     dishCountEl.textContent = `${allDishes.length} 件`
 }
 
-// ============================================
-// 半角カタカナ変換
-// ============================================
-function toHalfWidthKatakana(str) {
-    let result = str.replace(/[\u3041-\u3096]/g, (match) => {
-        return String.fromCharCode(match.charCodeAt(0) + 0x60)
-    })
 
-    const kanaMap = {
-        'ア': 'ｱ', 'イ': 'ｲ', 'ウ': 'ｳ', 'エ': 'ｴ', 'オ': 'ｵ',
-        'カ': 'ｶ', 'キ': 'ｷ', 'ク': 'ｸ', 'ケ': 'ｹ', 'コ': 'ｺ',
-        'サ': 'ｻ', 'シ': 'ｼ', 'ス': 'ｽ', 'セ': 'ｾ', 'ソ': 'ｿ',
-        'タ': 'ﾀ', 'チ': 'ﾁ', 'ツ': 'ﾂ', 'テ': 'ﾃ', 'ト': 'ﾄ',
-        'ナ': 'ﾅ', 'ニ': 'ﾆ', 'ヌ': 'ﾇ', 'ネ': 'ﾈ', 'ノ': 'ﾉ',
-        'ハ': 'ﾊ', 'ヒ': 'ﾋ', 'フ': 'ﾌ', 'ヘ': 'ﾍ', 'ホ': 'ﾎ',
-        'マ': 'ﾏ', 'ミ': 'ﾐ', 'ム': 'ﾑ', 'メ': 'ﾒ', 'モ': 'ﾓ',
-        'ヤ': 'ﾔ', 'ユ': 'ﾕ', 'ヨ': 'ﾖ',
-        'ラ': 'ﾗ', 'リ': 'ﾘ', 'ル': 'ﾙ', 'レ': 'ﾚ', 'ロ': 'ﾛ',
-        'ワ': 'ﾜ', 'ヲ': 'ｦ', 'ン': 'ﾝ',
-        'ァ': 'ｧ', 'ィ': 'ｨ', 'ゥ': 'ｩ', 'ェ': 'ｪ', 'ォ': 'ｫ',
-        'ッ': 'ｯ', 'ャ': 'ｬ', 'ュ': 'ｭ', 'ョ': 'ｮ',
-        'ガ': 'ｶﾞ', 'ギ': 'ｷﾞ', 'グ': 'ｸﾞ', 'ゲ': 'ｹﾞ', 'ゴ': 'ｺﾞ',
-        'ザ': 'ｻﾞ', 'ジ': 'ｼﾞ', 'ズ': 'ｽﾞ', 'ゼ': 'ｾﾞ', 'ゾ': 'ｿﾞ',
-        'ダ': 'ﾀﾞ', 'ヂ': 'ﾁﾞ', 'ヅ': 'ﾂﾞ', 'デ': 'ﾃﾞ', 'ド': 'ﾄﾞ',
-        'バ': 'ﾊﾞ', 'ビ': 'ﾋﾞ', 'ブ': 'ﾌﾞ', 'ベ': 'ﾍﾞ', 'ボ': 'ﾎﾞ',
-        'パ': 'ﾊﾟ', 'ピ': 'ﾋﾟ', 'プ': 'ﾌﾟ', 'ペ': 'ﾍﾟ', 'ポ': 'ﾎﾟ',
-        'ヴ': 'ｳﾞ', 'ー': 'ｰ'
-    }
-
-    result = result.split('').map(char => kanaMap[char] || char).join('')
-    return result
-}
-
-// ============================================
-// 全角カタカナのみに制限
-// ============================================
-function sanitizeToFullWidthKatakana(str) {
-    let result = str.replace(/[\u3041-\u3096]/g, (match) => {
-        return String.fromCharCode(match.charCodeAt(0) + 0x60)
-    })
-    result = result.replace(/[^ァ-ヶー]/g, '')
-    return result
-}
 
 // ============================================
 // 商品の原価を取得
@@ -387,56 +336,6 @@ function calculateCourseCost(courseItems) {
         total += dishCost * (item.portion || 1)
     }
     return total
-}
-
-// ============================================
-// 商品の材料に要確認があるかチェック
-// ============================================
-function dishHasNeedsReviewIngredient(dish) {
-    if (!dish?.dish_ingredients) return false
-
-    for (const ing of dish.dish_ingredients) {
-        if (ing.ingredient_type === 'item') {
-            const item = allItems.find(i => i.item_id === ing.ingredient_id)
-            if (item?.needs_review) return true
-        } else if (ing.ingredient_type === 'preparation') {
-            const prep = allPreparations.find(p => p.preparation_id === ing.ingredient_id)
-            if (prep?.needs_review) return true
-            // 仕込み品の材料も再帰的にチェック
-            if (prepHasNeedsReviewIngredient(prep)) return true
-        }
-    }
-    return false
-}
-
-// 仕込み品の材料に要確認があるかチェック（再帰用）
-function prepHasNeedsReviewIngredient(prep) {
-    if (!prep?.preparation_ingredients) return false
-
-    for (const ing of prep.preparation_ingredients) {
-        if (ing.ingredient_type === 'item') {
-            const item = allItems.find(i => i.item_id === ing.ingredient_id)
-            if (item?.needs_review) return true
-        } else if (ing.ingredient_type === 'preparation') {
-            const subPrep = allPreparations.find(p => p.preparation_id === ing.ingredient_id)
-            if (subPrep?.needs_review) return true
-            if (prepHasNeedsReviewIngredient(subPrep)) return true
-        }
-    }
-    return false
-}
-
-// ============================================
-// コースに要確認商品が含まれるかチェック
-// ============================================
-function courseHasNeedsReviewDish(course) {
-    if (!course.course_items) return false
-
-    for (const item of course.course_items) {
-        const dish = allDishes.find(d => d.dish_id === item.dish_id)
-        if (dishHasNeedsReviewIngredient(dish)) return true
-    }
-    return false
 }
 
 // ============================================
@@ -511,11 +410,11 @@ function renderCourses() {
 
     courseList.innerHTML = html
 
-    // 行クリックで編集モーダル
-    document.querySelectorAll('.course-row').forEach(row => {
-        row.addEventListener('click', () => {
-            const courseId = parseInt(row.dataset.courseId)
-            openEditModal(courseId)
+    // ヘッダークリックでアコーディオン展開
+    document.querySelectorAll('.course-header').forEach(header => {
+        header.addEventListener('click', () => {
+            const courseId = parseInt(header.dataset.courseId)
+            toggleCourseAccordion(courseId)
         })
     })
 }
@@ -531,35 +430,159 @@ function renderCourseRow(course, isInactive = false) {
     const itemCount = (course.course_items || []).length
 
     const hasReviewDish = courseHasNeedsReviewDish(course)
-    const reviewBadge = hasReviewDish ? '<span class="text-xs px-2 py-0.5 bg-orange-100 text-orange-600 rounded font-bold ml-2">⚠️ 商品に要確認</span>' : ''
+    const reviewList = hasReviewDish ? getNeedsReviewListForCourse(course) : []
+    const reviewTooltip = reviewList.length > 0 ? `要確認:\n${reviewList.join('\n')}` : ''
+    const reviewBadge = hasReviewDish ? `<span class="text-xs px-2 py-0.5 bg-orange-100 text-orange-600 rounded font-bold ml-2 cursor-help" title="${reviewTooltip}">⚠️ 商品に要確認</span>` : ''
     const borderClass = hasReviewDish ? 'border-orange-300 bg-orange-50' : ''
 
     return `
-        <div class="flex items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer course-row ${isInactive ? 'opacity-60' : ''} ${borderClass}" data-course-id="${course.course_id}">
-            <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-3 flex-wrap">
-                    <span class="font-bold text-gray-800 text-lg">${course.course_name}</span>
-                    ${reviewBadge}
-                    <span class="text-sm text-gray-400">${itemCount}品</span>
+        <div class="course-card ${borderClass}" data-course-id="${course.course_id}">
+            <div class="flex items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer course-header" data-course-id="${course.course_id}">
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <span class="font-bold text-gray-800 text-lg">${course.course_name}</span>
+                        ${reviewBadge}
+                        <span class="text-sm text-gray-400">${itemCount}品</span>
+                    </div>
+                    ${course.course_kana ? `<div class="text-xs text-gray-400 mt-1">${course.course_kana}</div>` : ''}
                 </div>
-                ${course.course_kana ? `<div class="text-xs text-gray-400 mt-1">${course.course_kana}</div>` : ''}
+                <div class="flex items-center gap-6">
+                    <div class="text-right">
+                        <div class="font-bold text-xl text-gray-800">¥${sellingPrice.toLocaleString()}</div>
+                        <div class="text-xs text-gray-400">(税込)</div>
+                    </div>
+                    <div class="text-right w-20">
+                        <div class="font-bold text-blue-600">¥${cost.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                        <div class="text-xs text-gray-400">原価</div>
+                    </div>
+                    <div class="text-right w-20">
+                        ${taxExcludedPrice > 0 ? `
+                            <div class="font-bold ${costRate > 35 ? 'text-red-600' : costRate > 30 ? 'text-orange-500' : 'text-green-600'}">${costRate.toFixed(1)}%</div>
+                            <div class="text-xs text-gray-400">原価率</div>
+                        ` : `
+                            <div class="text-gray-300">--%</div>
+                        `}
+                    </div>
+                </div>
             </div>
-            <div class="flex items-center gap-6">
-                <div class="text-right">
-                    <div class="font-bold text-xl text-gray-800">¥${sellingPrice.toLocaleString()}</div>
-                    <div class="text-xs text-gray-400">(税込)</div>
-                </div>
-                <div class="text-right w-24">
-                    ${taxExcludedPrice > 0 ? `
-                        <div class="font-bold ${costRate > 35 ? 'text-red-600' : costRate > 30 ? 'text-orange-500' : 'text-green-600'}">${costRate.toFixed(1)}%</div>
-                        <div class="text-xs text-gray-400">原価率</div>
-                    ` : `
-                        <div class="text-gray-300">--%</div>
-                    `}
-                </div>
+            <div class="course-detail hidden" data-course-id="${course.course_id}">
+                <!-- 展開時にJSで中身を入れる -->
             </div>
         </div>
     `
+}
+// ============================================
+// コースアコーディオン開閉
+// ============================================
+function toggleCourseAccordion(courseId) {
+    const detailEl = document.querySelector(`.course-detail[data-course-id="${courseId}"]`)
+    if (!detailEl) return
+
+    const isOpen = !detailEl.classList.contains('hidden')
+
+    if (isOpen) {
+        // 閉じる
+        detailEl.style.maxHeight = detailEl.scrollHeight + 'px'
+        detailEl.offsetHeight // reflow
+        detailEl.style.maxHeight = '0'
+        detailEl.style.overflow = 'hidden'
+        setTimeout(() => {
+            detailEl.classList.add('hidden')
+            detailEl.style.maxHeight = ''
+            detailEl.style.overflow = ''
+        }, 300)
+    } else {
+        // 開く
+        const course = allCourses.find(c => c.course_id === courseId)
+        if (!course) return
+
+        detailEl.innerHTML = renderCourseDetail(course)
+        detailEl.classList.remove('hidden')
+        detailEl.style.maxHeight = '0'
+        detailEl.style.overflow = 'hidden'
+        detailEl.offsetHeight // reflow
+        detailEl.style.transition = 'max-height 0.3s ease-out'
+        detailEl.style.maxHeight = detailEl.scrollHeight + 'px'
+
+        setTimeout(() => {
+            detailEl.style.maxHeight = 'none'
+            detailEl.style.overflow = ''
+            detailEl.style.transition = ''
+        }, 300)
+
+        // イベントリスナー設定
+        setupCourseDetailListeners(courseId)
+    }
+}
+
+// ============================================
+// コース詳細（展開時の中身）を描画
+// ============================================
+function renderCourseDetail(course) {
+    const items = course.course_items || []
+    const sorted = [...items].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+
+    let html = `
+        <div class="border border-t-0 rounded-b-lg bg-gray-50 p-4">
+            <!-- 見出し -->
+            <div class="flex items-center text-sm text-gray-500 font-bold mb-2 px-2">
+                <div class="flex-1">商品名</div>
+                <div class="w-20 text-center">分量</div>
+                <div class="w-24 text-right">原価</div>
+            </div>
+            <div class="border-t border-gray-200 mb-2"></div>
+            <!-- 商品リスト -->
+    `
+
+    for (const item of sorted) {
+        const dish = allDishes.find(d => d.dish_id === item.dish_id)
+        const dishName = dish ? dish.dish_name : '（不明な商品）'
+        const dishCost = dish ? getDishCost(dish.dish_id) : 0
+        const portionCost = dishCost * (item.portion || 1)
+        const portionDisplay = item.portion === 1 ? '×1' : `×${item.portion}`
+
+        html += `
+            <div class="flex items-center py-2 px-2 hover:bg-gray-100 rounded">
+                <div class="flex-1 font-medium text-gray-800">${dishName}</div>
+                <div class="w-20 text-center text-gray-600">${portionDisplay}</div>
+                <div class="w-24 text-right font-bold text-blue-600">¥${portionCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+            </div>
+        `
+    }
+
+    html += `
+            <div class="border-t border-gray-200 mt-2 mb-3"></div>
+            <!-- ボタン -->
+            <div class="flex justify-center gap-4">
+                <button type="button" class="close-detail-btn px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded transition-colors">
+                    閉じる
+                </button>
+                <button type="button" class="edit-course-btn px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors" data-course-id="${course.course_id}">
+                    編集
+                </button>
+            </div>
+        </div>
+    `
+
+    return html
+}
+
+// ============================================
+// コース詳細のイベントリスナー設定
+// ============================================
+function setupCourseDetailListeners(courseId) {
+    const detailEl = document.querySelector(`.course-detail[data-course-id="${courseId}"]`)
+    if (!detailEl) return
+
+    // 閉じるボタン
+    detailEl.querySelector('.close-detail-btn')?.addEventListener('click', () => {
+        toggleCourseAccordion(courseId)
+    })
+
+    // 編集ボタン
+    detailEl.querySelector('.edit-course-btn')?.addEventListener('click', () => {
+        openEditModal(courseId)
+    })
 }
 
 // ============================================

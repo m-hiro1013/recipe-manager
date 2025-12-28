@@ -1,0 +1,316 @@
+# =====================================
+# 📋 PROJECT_SPECIFIC.yaml
+# =====================================
+#
+# 【このファイルの役割】
+# このプロジェクト固有の設定・仕様を記録するファイル。
+# プロジェクトの「何を作るか」「どんな技術を使うか」を定義する。
+# 要件定義時に作成し、仕様が変わったときに更新する。
+#
+# 【このファイルに書くこと】
+# - プロジェクト名・概要・目的
+# - 技術スタック（バックエンド、フロントエンド、CSS、ビルドツール、デプロイ先）
+# - 環境情報（GitHub URL、本番URL、バックエンドURL）
+# - ユーザー情報（開発者名、ターゲットユーザー）
+# - データ構造の概念（このプロジェクト特有の階層構造など）
+# - ビジネスロジック（原価計算ロジック等、このプロジェクト特有の計算式）
+# - 外部連携仕様（CSVインポート仕様等）
+# - 認証方針
+# - プロジェクト固有の制約・ルール
+#
+# 【このファイルに書かないこと】
+# - AIの振る舞いやルール → SYSTEM_PROMPT.yaml
+# - 開発プロセスの定義 → SYSTEM_PROMPT.yaml
+# - 現在の進捗状況 → WORKFLOW.yaml
+# - 機能一覧と完了状況 → WORKFLOW.yaml
+# - 決定事項の記録 → WORKFLOW.yaml
+# - ファイル構成の現状 → WORKFLOW.yaml
+# - テーブル定義・カラム情報 → DATABASE.md
+#
+# 【このファイルを更新するタイミング】
+# - Step0（環境構築）完了時 → プロジェクト名、技術スタック、環境情報を記入
+# - Step1（要件定義）完了時 → データ構造、ビジネスロジック、外部連携仕様を記入
+# - 技術スタックが変わったとき
+# - 環境情報（URL等）が変わったとき
+# - ビジネスロジックの根本が変わったとき
+# - 外部連携仕様が追加・変更されたとき
+# ※ 進捗や決定事項の更新はWORKFLOW.yamlへ
+#
+# 【セクション構成】
+# 1. プロジェクト基本情報
+# 2. ユーザー情報
+# 3. 技術スタック
+# 4. 環境情報
+# 5. データ構造
+# 6. ビジネスロジック
+# 7. 外部連携仕様
+# 8. 認証方針
+# 9. プロジェクト固有の制約
+#
+# =====================================
+
+
+project_specific:
+  version: "1.0"
+  last_updated: "2025-12-28"
+
+
+# =====================================
+# 1. プロジェクト基本情報
+# =====================================
+project:
+  name: "レシピ管理・原価計算システム"
+  description: "飲食店のレシピ管理と原価計算を効率化するWebアプリ"
+  purpose: "飲食店のレシピ管理と原価計算を効率化"
+  created_at: "2025-01-20"
+
+
+# =====================================
+# 2. ユーザー情報
+# =====================================
+user:
+  developer:
+    name: "ひろきくん"
+  
+  target_users:
+    phase1:
+      - role: "最上位管理者（ひろきくん）"
+        count: 1
+        permissions: "全機能"
+    phase2:
+      - role: "業態PM"
+        count: 4
+        permissions: "後で決める"
+      - role: "店舗マネージャー/シェフ"
+        count: 20
+        permissions: "後で決める"
+      - role: "スタッフ"
+        count: 400
+        permissions: "後で決める"
+
+  business_info:
+    total_stores: 21
+    business_types:
+      all: ["和食", "アジアン", "イタリアン", "中華", "カフェ", "焼肉"]
+      phase1: ["アジアン", "イタリアン"]
+    note: "業態ごとにレシピは完全に別管理"
+
+
+# =====================================
+# 3. 技術スタック
+# =====================================
+tech_stack:
+  backend: "Supabase（PostgreSQL）"
+  frontend: "HTML / CSS / JavaScript（素のJS）"
+  css_framework: "TailwindCSS (v4)"
+  build_tool: "Vite"
+  deploy: "Vercel"
+  version_control: "Git + GitHub"
+  
+  constraints:
+    - name: "localStorage禁止"
+      reason: "データは全てSupabaseに保存する方針"
+
+
+# =====================================
+# 4. 環境情報
+# =====================================
+environment:
+  local:
+    project_path: "~/Desktop/define"
+    dev_server: "npm run dev → http://localhost:5173/"
+  
+  github:
+    repository: "https://github.com/m-hiro1013/recipe-manager.git"
+    branch: "main"
+  
+  vercel:
+    url: "https://recipe-manager-blue-one.vercel.app/"
+    auto_deploy: true
+  
+  supabase:
+    project_url: "https://nutxwlrzghqwnttjakzg.supabase.co"
+    note: "anon keyは.envに保存済み"
+  
+  environment_variables:
+    local:
+      - name: "VITE_SUPABASE_URL"
+      - name: "VITE_SUPABASE_ANON_KEY"
+  
+  vscode_extensions:
+    - "Japanese Language Pack"
+    - "Prettier - Code formatter"
+    - "Tailwind CSS IntelliSense"
+    - "ES7+ React/Redux/React-Native snippets"
+    - "Live Server"
+
+
+# =====================================
+# 5. データ構造
+# =====================================
+data_structure:
+  description: "仕入れ商品→アイテム→仕込み品→商品→コースの階層構造"
+  
+  hierarchy:
+    - level: 1
+      name: "仕入れ商品（products）"
+      count: "1000件以上"
+      source: "インフォマートCSV"
+      note: "全業態で共通"
+    
+    - level: 2
+      name: "使用商品"
+      count: "500件程度"
+      description: "仕入れ商品から選択（is_active=true）"
+    
+    - level: 3
+      name: "アイテム（items）"
+      description: "使用商品を部品化したもの"
+      relationship: "アイテム : 仕入れ商品 = 1 : 1"
+      note: "業態ごとに分離"
+    
+    - level: 4
+      name: "仕込み品（preparations）"
+      count: "100〜300件"
+      ingredients: ["アイテム", "他の仕込み品"]
+      note: "業態ごとに分離、再帰的構造（仕込み品が仕込み品を材料にできる）"
+    
+    - level: 5
+      name: "商品（dishes）"
+      count: "100件〜"
+      ingredients: ["アイテム", "仕込み品"]
+      note: "業態ごとに分離"
+    
+    - level: 6
+      name: "コース（courses）"
+      ingredients: ["商品のみ"]
+      note: "業態ごとに分離、ポーション対応"
+
+  business_type_separation:
+    shared: ["products", "suppliers", "settings"]
+    separated: ["items", "preparations", "dishes", "courses", "item_genres", "preparation_sections", "dish_sections"]
+
+
+# =====================================
+# 6. ビジネスロジック
+# =====================================
+business_logic:
+  cost_calculation:
+    description: "原価は全てDBに保存せず、表示時にcostCalculator.jsで計算"
+    
+    item_unit_cost:
+      formula: "仕入れ単価 ÷ 取れる数"
+      example: "5000円 ÷ 4カット = 1250円/カット"
+    
+    preparation_cost:
+      formula: "材料の（単位原価 × 使用量）の合計"
+      note: "仕込み品が仕込み品を材料にするケースは再帰計算"
+    
+    dish_cost:
+      formula: "材料の（単位原価 × 使用量）の合計"
+      note: "仕上がりは常に1単位"
+    
+    course_cost:
+      formula: "商品の（原価 × ポーション）の合計"
+    
+    yield_rate:
+      status: "なし（YAGNIで後回し）"
+      note: "必要になったら列追加で対応可能"
+
+  pricing:
+    dish_selling_price:
+      input: "税抜"
+      display: "税抜、税込（計算）、原価率（計算）"
+    
+    course_selling_price:
+      input: "税込"
+      calculation: "原価率は税抜換算して計算（税込売価 ÷ (1+税率)）"
+      note: "「※税込入力→税抜計算」の注釈を表示"
+    
+    tax_rate:
+      default: 10
+      storage: "settingsテーブル（key: tax_rate）"
+      editable: true
+
+  needs_review_flag:
+    description: "「仮の数値で登録、後で確認が必要」を示すフラグ"
+    tables_with_flag: ["items", "preparations"]
+    propagation: "下から上に伝播（アイテム→仕込み品→商品→コース）"
+    display:
+      edit_pages: "⚠️マーク表示"
+      view_pages: "表示しない"
+
+
+# =====================================
+# 7. 外部連携仕様
+# =====================================
+external_integrations:
+  csv_import:
+    source: "インフォマート"
+    file_format:
+      encoding: "Shift-JIS"
+      delimiter: "カンマ"
+      row1: "タイトル行（スキップ）"
+      row2: "ヘッダー行"
+      row3_onwards: "データ"
+    
+    required_columns:
+      - csv_column: "商品システムコード"
+        db_column: "product_code"
+        note: "主キー、同一商品判定に使用"
+      - csv_column: "商品名"
+        db_column: "product_name"
+      - csv_column: "規格"
+        db_column: "specification"
+      - csv_column: "単価"
+        db_column: "unit_price"
+      - csv_column: "取引先名"
+        db_column: "supplier_name"
+      - csv_column: "更新日"
+        db_column: "（重複判定用、DBには保存しない）"
+        note: "同じ商品コードが複数ある場合、更新日が新しい方を採用"
+    
+    import_frequency: "月1回"
+    
+    update_logic:
+      existing_product: "単価のみ更新（商品名・規格・取引先名は変更しない）"
+      new_product: "新規追加"
+      duplicate_in_csv: "更新日が新しい方を採用"
+
+
+# =====================================
+# 8. 認証方針
+# =====================================
+authentication:
+  phase1:
+    status: "なし"
+    reason: "管理者1人のため"
+    rls: "無効"
+  
+  phase2:
+    plan: "Supabase Authで追加予定"
+    note: "テーブルにuser_id列は用意済み想定で拡張しやすく"
+
+
+# =====================================
+# 9. プロジェクト固有の制約
+# =====================================
+project_constraints:
+  - name: "読み仮名は全角カタカナのみ"
+    reason: "五十音順ソートと検索のため"
+    implementation: "blurイベントでサニタイズ（IME変換を妨害しないため）"
+  
+  - name: "モーダル外クリックでの閉じるを禁止"
+    reason: "入力中のデータが消えるリスクを防ぐ"
+  
+  - name: "原価はDBに保存しない"
+    reason: "正規化対応、データ整合性を常に担保"
+    implementation: "costCalculator.jsで表示時に計算"
+  
+  - name: "削除時は必ずDBで参照チェック"
+    reason: "データ整合性を確実に担保するため"
+    implementation: "ローカルキャッシュではなくDBクエリでチェック"
+  
+  - name: "全業態共通項目の変更時は確認メッセージ"
+    target: ["products", "suppliers", "settings"]
+    message: "この変更は全業態に反映されます"

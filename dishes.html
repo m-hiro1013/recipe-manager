@@ -122,6 +122,22 @@
                     </a>
                 </li>
                 <li class="pt-4 border-t border-gray-700 mt-4">
+                    <a href="/menubook.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="メニューブック">
+                        <span class="flex-shrink-0">📖</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">メニューブック</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/recipebook.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="レシピブック">
+                        <span class="flex-shrink-0">📗</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">レシピブック</span>
+                    </a>
+                </li>
+                <li class="pt-4 border-t border-gray-700 mt-4">
                     <a href="/master.html"
                         class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
                         title="マスタ管理">
@@ -438,7 +454,27 @@
                             class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
                     </div>
                 </div>
+                <!-- ジャンル -->
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        ジャンル <span class="text-red-500">*</span>
+                    </label>
+                    <select id="quickItemGenre"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500">
+                        <option value="">選択してください</option>
+                        <!-- JSで動的に生成 -->
+                    </select>
+                </div>
 
+                <!-- 要確認フラグ -->
+                <div class="mb-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="quickItemNeedsReview"
+                            class="w-5 h-5 text-red-600 rounded border-2 border-gray-300 focus:ring-red-500" />
+                        <span class="text-sm font-bold text-gray-700">⚠️ 要確認</span>
+                        <span class="text-xs text-gray-500">（仮の数値で登録する場合）</span>
+                    </label>
+                </div>
                 <div class="bg-blue-50 rounded-lg p-4 mb-6">
                     <p class="text-sm text-gray-600 mb-1">単位原価</p>
                     <p id="quickUnitCostPreview" class="text-xl font-bold text-blue-600">---</p>

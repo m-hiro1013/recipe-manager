@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js'
+import { readFileAsShiftJIS, parseCSV, findColumnIndex } from './utils.js'
 
 // ============================================
 // DOM要素の取得
@@ -166,6 +167,67 @@ importBtn.addEventListener('click', async () => {
             console.error('取引先登録エラー:', suppliersError)
         }
 
+        // ========================================
+        // 中間テーブルにレコードを作成
+        // ========================================
+
+        // 全業態を取得
+        const { data: businessTypes, error: btError } = await supabase
+            .from('business_types')
+            .select('business_type_id')
+
+        if (btError) {
+            console.error('業態取得エラー:', btError)
+        } else if (businessTypes && businessTypes.length > 0) {
+            // 商品 × 業態 の中間テーブルレコードを作成
+            const productBusinessTypes = []
+            for (const product of products) {
+                for (const bt of businessTypes) {
+                    productBusinessTypes.push({
+                        product_code: product.product_code,
+                        business_type_id: bt.business_type_id,
+                        is_active: false
+                    })
+                }
+            }
+
+            // upsertで既存レコードはスキップ
+            const { error: pbtError } = await supabase
+                .from('product_business_types')
+                .upsert(productBusinessTypes, {
+                    onConflict: 'product_code,business_type_id',
+                    ignoreDuplicates: true
+                })
+
+            if (pbtError) {
+                console.error('商品×業態の中間テーブル登録エラー:', pbtError)
+            }
+
+            // 業者 × 業態 の中間テーブルレコードを作成
+            const supplierBusinessTypes = []
+            for (const supplierName of supplierNames) {
+                for (const bt of businessTypes) {
+                    supplierBusinessTypes.push({
+                        supplier_name: supplierName,
+                        business_type_id: bt.business_type_id,
+                        is_hidden: false
+                    })
+                }
+            }
+
+            // upsertで既存レコードはスキップ
+            const { error: sbtError } = await supabase
+                .from('supplier_business_types')
+                .upsert(supplierBusinessTypes, {
+                    onConflict: 'supplier_name,business_type_id',
+                    ignoreDuplicates: true
+                })
+
+            if (sbtError) {
+                console.error('業者×業態の中間テーブル登録エラー:', sbtError)
+            }
+        }
+
         showResult('success', `✅ ${products.length}件のインポートが完了しました！`)
 
         // 統計情報を更新
@@ -189,71 +251,6 @@ importBtn.addEventListener('click', async () => {
 // ============================================
 // ユーティリティ関数
 // ============================================
-function readFileAsShiftJIS(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = (e) => resolve(e.target.result)
-        reader.onerror = (e) => reject(e)
-        reader.readAsText(file, 'Shift_JIS')
-    })
-}
-
-function parseCSV(text) {
-    const rows = []
-    let currentRow = []
-    let currentField = ''
-    let inQuotes = false
-
-    for (let i = 0; i < text.length; i++) {
-        const char = text[i]
-        const nextChar = text[i + 1]
-
-        if (inQuotes) {
-            if (char === '"' && nextChar === '"') {
-                currentField += '"'
-                i++
-            } else if (char === '"') {
-                inQuotes = false
-            } else {
-                currentField += char
-            }
-        } else {
-            if (char === '"') {
-                inQuotes = true
-            } else if (char === ',') {
-                currentRow.push(currentField.trim())
-                currentField = ''
-            } else if (char === '\r' && nextChar === '\n') {
-                currentRow.push(currentField.trim())
-                rows.push(currentRow)
-                currentRow = []
-                currentField = ''
-                i++
-            } else if (char === '\n') {
-                currentRow.push(currentField.trim())
-                rows.push(currentRow)
-                currentRow = []
-                currentField = ''
-            } else {
-                currentField += char
-            }
-        }
-    }
-
-    if (currentField || currentRow.length > 0) {
-        currentRow.push(currentField.trim())
-        rows.push(currentRow)
-    }
-
-    return rows
-}
-
-function findColumnIndex(headerRow, columnName) {
-    return headerRow.findIndex(cell => {
-        const cleaned = cell.replace(/^\[/, '').replace(/\]$/, '')
-        return cleaned === columnName
-    })
-}
 
 function showResult(type, message) {
     resultArea.classList.remove('hidden')
