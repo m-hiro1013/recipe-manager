@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AIサポート | レシピ管理システム</title>
+    <link rel="stylesheet" href="/src/style.css" />
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+
+    <!-- サイドメニュー -->
+    <aside id="sidebar"
+        class="fixed top-0 left-0 h-screen bg-gray-800 text-white flex flex-col z-30 transition-all duration-300 w-56">
+        <!-- ロゴ部分 -->
+        <div class="p-4 border-b border-gray-700 flex items-center justify-between">
+            <h1 id="logoText" class="text-lg font-bold whitespace-nowrap overflow-hidden">🍳 レシピ管理</h1>
+            <button id="toggleBtn" class="text-gray-400 hover:text-white p-1">
+                <svg id="toggleIcon" class="w-6 h-6 transition-transform duration-300" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                </svg>
+            </button>
+        </div>
+        <!-- メニュー -->
+        <nav class="flex-1 p-4">
+            <ul class="space-y-2">
+                <li>
+                    <a href="/import.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="インポート">
+                        <span class="flex-shrink-0">📥</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">インポート</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="仕入れ商品">
+                        <span class="flex-shrink-0">📦</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">仕入れ商品</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/items.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="アイテム">
+                        <span class="flex-shrink-0">🧩</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">アイテム</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/preparations.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="仕込み品">
+                        <span class="flex-shrink-0">🍳</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">仕込み品</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dishes.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="商品">
+                        <span class="flex-shrink-0">🍽️</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">商品</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/courses.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="コース">
+                        <span class="flex-shrink-0">📜</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">コース</span>
+                    </a>
+                </li>
+                <li class="pt-4 border-t border-gray-700 mt-4">
+                    <a href="/menubook.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="メニューブック">
+                        <span class="flex-shrink-0">📖</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">メニューブック</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/recipebook.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="レシピブック">
+                        <span class="flex-shrink-0">📗</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">レシピブック</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/ai-support.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-600 text-white" title="AIサポート">
+                        <span class="flex-shrink-0">🤖</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">AIサポート</span>
+                    </a>
+                </li>
+                <li class="pt-4 border-t border-gray-700 mt-4">
+                    <a href="/master.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="マスタ管理">
+                        <span class="flex-shrink-0">⚙️</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">マスタ管理</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- メインコンテンツ -->
+    <div id="mainContent" class="transition-all duration-300 ml-56">
+        <!-- ヘッダー -->
+        <header class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-20">
+            <div class="max-w-4xl mx-auto">
+                <h2 class="text-xl font-bold">🤖 AIサポート</h2>
+            </div>
+        </header>
+
+        <!-- メインコンテンツ -->
+        <main class="max-w-4xl mx-auto p-6">
+
+            <!-- ステップインジケーター -->
+            <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+                <div class="flex items-center justify-between">
+                    <div class="step-indicator flex items-center gap-2" data-step="1">
+                        <div
+                            class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
+                            1</div>
+                        <span class="text-sm font-medium hidden sm:inline">アップロード</span>
+                    </div>
+                    <div class="flex-1 h-1 bg-gray-200 mx-2"></div>
+                    <div class="step-indicator flex items-center gap-2 opacity-50" data-step="2">
+                        <div
+                            class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm">
+                            2</div>
+                        <span class="text-sm font-medium hidden sm:inline">レシピ選択</span>
+                    </div>
+                    <div class="flex-1 h-1 bg-gray-200 mx-2"></div>
+                    <div class="step-indicator flex items-center gap-2 opacity-50" data-step="3">
+                        <div
+                            class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm">
+                            3</div>
+                        <span class="text-sm font-medium hidden sm:inline">基本情報</span>
+                    </div>
+                    <div class="flex-1 h-1 bg-gray-200 mx-2"></div>
+                    <div class="step-indicator flex items-center gap-2 opacity-50" data-step="4">
+                        <div
+                            class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm">
+                            4</div>
+                        <span class="text-sm font-medium hidden sm:inline">材料確認</span>
+                    </div>
+                    <div class="flex-1 h-1 bg-gray-200 mx-2"></div>
+                    <div class="step-indicator flex items-center gap-2 opacity-50" data-step="5">
+                        <div
+                            class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm">
+                            5</div>
+                        <span class="text-sm font-medium hidden sm:inline">紐付け</span>
+                    </div>
+                    <div class="flex-1 h-1 bg-gray-200 mx-2"></div>
+                    <div class="step-indicator flex items-center gap-2 opacity-50" data-step="6">
+                        <div
+                            class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm">
+                            6</div>
+                        <span class="text-sm font-medium hidden sm:inline">分量確認</span>
+                    </div>
+                    <div class="flex-1 h-1 bg-gray-200 mx-2"></div>
+                    <div class="step-indicator flex items-center gap-2 opacity-50" data-step="7">
+                        <div
+                            class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm">
+                            7</div>
+                        <span class="text-sm font-medium hidden sm:inline">完了</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP1: ファイルアップロード -->
+            <div id="step1" class="step-content">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">📄 レシピファイルをアップロード</h3>
+                    <p class="text-gray-600 mb-6">PPT、Excel、画像、PDFに対応しています。AIがレシピ情報を読み取ります。</p>
+
+                    <!-- ドラッグ&ドロップエリア -->
+                    <div id="dropZone"
+                        class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 hover:bg-blue-50 transition-colors cursor-pointer">
+                        <div class="text-4xl mb-4">📁</div>
+                        <p class="text-gray-600 mb-2">ファイルをドラッグ&ドロップ</p>
+                        <p class="text-gray-400 text-sm mb-4">または</p>
+                        <label
+                            class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-bold cursor-pointer hover:bg-blue-700 transition-colors">
+                            ファイルを選択
+                            <input type="file" id="fileInput" class="hidden"
+                                accept=".ppt,.pptx,.xls,.xlsx,.pdf,.png,.jpg,.jpeg,.gif,.webp" />
+                        </label>
+                        <p class="text-gray-400 text-xs mt-4">対応形式: PPT, Excel, PDF, 画像（PNG, JPG, GIF, WebP）</p>
+                    </div>
+
+                    <!-- 選択されたファイル表示 -->
+                    <div id="selectedFile" class="hidden mt-4 p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl" id="fileIcon">📄</span>
+                                <div>
+                                    <p class="font-medium text-gray-800" id="fileName"></p>
+                                    <p class="text-sm text-gray-500" id="fileSize"></p>
+                                </div>
+                            </div>
+                            <button id="removeFile" class="text-red-500 hover:text-red-700 text-xl">&times;</button>
+                        </div>
+                    </div>
+
+                    <!-- 読み取りボタン -->
+                    <div class="mt-6">
+                        <button id="analyzeBtn"
+                            class="w-full bg-blue-600 text-white px-6 py-4 rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            disabled>
+                            🤖 AIで読み取る
+                        </button>
+                    </div>
+
+                    <!-- ローディング -->
+                    <div id="loadingIndicator" class="hidden mt-6 text-center">
+                        <div
+                            class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent">
+                        </div>
+                        <p class="text-gray-600 mt-2">AIが読み取り中...</p>
+                    </div>
+
+                    <!-- エラー表示 -->
+                    <div id="errorMessage"
+                        class="hidden mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                    </div>
+                    <div id="sessionHistorySection" class="hidden mt-6 border-t pt-6">
+                        <h4 class="text-sm font-bold text-gray-700 mb-3">📂 作業途中のセッション</h4>
+                        <div id="sessionHistoryList" class="space-y-2">
+                            <!-- JSで動的に生成 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP2: レシピ選択 -->
+            <div id="step2" class="step-content hidden">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">📋 登録するレシピを選択</h3>
+                    <p class="text-gray-600 mb-6">読み取ったレシピの中から、登録するものを選んでください。</p>
+
+                    <div id="recipeList" class="space-y-3 max-h-150 overflow-y-auto">
+                        <!-- JSで動的に生成 -->
+                    </div>
+
+                    <div class="mt-6 flex gap-4">
+                        <button id="backToStep1"
+                            class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                            ← 戻る
+                        </button>
+                        <button id="goToStep3"
+                            class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            disabled>
+                            次へ →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP3: 種別選択 + 基本情報 -->
+            <div id="step3" class="step-content hidden">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">📝 基本情報を入力</h3>
+
+                    <!-- 種別選択 -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">種別 <span
+                                class="text-red-500">*</span></label>
+                        <div class="flex gap-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="recipeType" value="preparation"
+                                    class="w-5 h-5 text-blue-600" />
+                                <span class="text-gray-700">🍳 仕込み品</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="recipeType" value="dish" class="w-5 h-5 text-blue-600" />
+                                <span class="text-gray-700">🍽️ 商品</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 名前 -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">名前 <span
+                                class="text-red-500">*</span></label>
+                        <input type="text" id="recipeName"
+                            class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                            placeholder="例：トマトソース" />
+                    </div>
+
+                    <!-- 読み仮名 -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">読み仮名 <span
+                                class="text-red-500">*</span></label>
+                        <input type="text" id="recipeKana"
+                            class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                            placeholder="例：トマトソース" />
+                    </div>
+
+                    <!-- セクション -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">セクション <span
+                                class="text-red-500">*</span></label>
+                        <select id="recipeSection"
+                            class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500">
+                            <option value="">選択してください</option>
+                        </select>
+                    </div>
+
+
+                    <!-- 商品のみ：売価 -->
+                    <div id="dishFields" class="hidden">
+                        <div class="mb-4">
+                            <label class="block text-sm font-bold text-gray-700 mb-2">売価（税抜）</label>
+                            <div class="flex items-center gap-2">
+                                <input type="number" id="sellingPrice"
+                                    class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                                    placeholder="例：1200" />
+                                <span class="text-gray-600">円</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex gap-4">
+                        <button id="backToStep2"
+                            class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                            ← 戻る
+                        </button>
+                        <button id="goToStep4"
+                            class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                            次へ →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP4: 材料リスト確認 -->
+            <div id="step4" class="step-content hidden">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">🥗 材料リストを確認</h3>
+                    <p class="text-gray-600 mb-6">AIが読み取った材料名を確認・修正してください。</p>
+
+                    <div id="ingredientNameList" class="space-y-3">
+                        <!-- JSで動的に生成 -->
+                    </div>
+
+                    <div class="mt-4">
+                        <button id="addIngredientName" class="text-blue-600 hover:text-blue-800 font-medium">
+                            ＋ 材料を追加
+                        </button>
+                    </div>
+
+                    <div class="mt-6 flex gap-4">
+                        <button id="backToStep3"
+                            class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                            ← 戻る
+                        </button>
+                        <button id="goToStep5"
+                            class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                            次へ →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP5: 材料の紐付け -->
+            <div id="step5" class="step-content hidden">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">🔗 材料を紐付け</h3>
+                    <p class="text-gray-600 mb-6">各材料を既存のアイテム・仕込み品と紐付けてください。</p>
+
+                    <div id="ingredientLinkList" class="space-y-3">
+                        <!-- JSで動的に生成 -->
+                    </div>
+
+                    <div class="mt-6 flex gap-4">
+                        <button id="backToStep4"
+                            class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                            ← 戻る
+                        </button>
+                        <button id="goToStep6"
+                            class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            disabled>
+                            次へ →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP6: 分量・単位の確認 -->
+            <div id="step6" class="step-content hidden">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">⚖️ 分量を確認</h3>
+                    <p class="text-gray-600 mb-6">各材料の分量・単位を確認・修正してください。</p>
+
+                    <div class="overflow-x-auto">
+                        <!-- 仕込み品のみ：仕上がり量・単位 -->
+                        <div id="yieldFieldsStep6" class="hidden mb-6 p-4 bg-blue-50 rounded-lg">
+                            <h4 class="font-bold text-gray-700 mb-3">📦 仕上がり</h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">仕上がり量 <span
+                                            class="text-red-500">*</span></label>
+                                    <input type="number" id="yieldQuantity"
+                                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                                        placeholder="例：1000" step="any" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">仕上がり単位 <span
+                                            class="text-red-500">*</span></label>
+                                    <input type="text" id="yieldUnit"
+                                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                                        placeholder="例：g" />
+                                </div>
+                            </div>
+                        </div>
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b">
+                                    <th class="text-left py-2 px-3 text-sm font-bold text-gray-700">材料名</th>
+                                    <th class="text-left py-2 px-3 text-sm font-bold text-gray-700">分量</th>
+                                    <th class="text-left py-2 px-3 text-sm font-bold text-gray-700">単位</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quantityTableBody">
+                                <!-- JSで動的に生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-6 flex gap-4">
+                        <button id="backToStep5"
+                            class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                            ← 戻る
+                        </button>
+                        <button id="goToStep7"
+                            class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                            登録する →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP7: 完了 -->
+            <div id="step7" class="step-content hidden">
+                <div class="bg-white rounded-lg shadow-md p-6 text-center">
+                    <div class="text-6xl mb-4">🎉</div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">登録完了！</h3>
+                    <p class="text-gray-600 mb-6" id="completionMessage">「トマトソース」を仕込み品として登録しました。</p>
+
+                    <!-- 未登録レシピがある場合 -->
+                    <div id="remainingRecipes" class="hidden mb-6">
+                        <p class="text-gray-700 font-medium mb-3">まだ登録していないレシピがあります：</p>
+                        <div id="remainingRecipeList" class="space-y-2 max-h-150 overflow-y-auto">
+                            <!-- JSで動的に生成 -->
+                        </div>
+                    </div>
+
+                    <div class="flex gap-4 justify-center">
+                        <button id="registerAnother"
+                            class="px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                            続けて登録
+                        </button>
+                        <button id="finishRegistration"
+                            class="px-6 py-3 border-2 border-gray-300 rounded-lg font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                            終了する
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- 紐付けモーダル -->
+    <div id="linkModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-40 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 class="text-lg font-bold">🔗 材料を紐付け</h2>
+                <button id="closeLinkModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div class="p-4">
+                <p class="text-gray-700 mb-4">「<span id="linkTargetName" class="font-bold"></span>」を紐付けます</p>
+
+                <!-- タブ -->
+                <div class="flex border-b mb-4">
+                    <button class="link-tab px-4 py-2 font-medium border-b-2 border-blue-600 text-blue-600"
+                        data-tab="item">アイテムから</button>
+                    <button class="link-tab px-4 py-2 font-medium text-gray-500 hover:text-gray-700"
+                        data-tab="preparation">仕込み品から</button>
+                    <button class="link-tab px-4 py-2 font-medium text-gray-500 hover:text-gray-700"
+                        data-tab="product">仕入れ商品から作成</button>
+                </div>
+
+                <!-- 検索 -->
+                <div class="mb-4">
+                    <input type="text" id="linkSearchInput"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                        placeholder="🔍 検索..." />
+                </div>
+
+                <!-- AIで探すボタン -->
+                <div class="mb-4">
+                    <button id="aiSearchBtn"
+                        class="w-full px-4 py-3 bg-purple-100 text-purple-700 rounded-lg font-medium hover:bg-purple-200 transition-colors">
+                        🤖 AIで探す
+                    </button>
+                </div>
+
+                <!-- 候補リスト -->
+                <div id="linkCandidateList" class="max-h-64 overflow-y-auto space-y-2">
+                    <!-- JSで動的に生成 -->
+                </div>
+            </div>
+            <div class="p-4 border-t flex gap-4">
+                <button id="cancelLink"
+                    class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                    キャンセル
+                </button>
+                <button id="confirmLink"
+                    class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    disabled>
+                    紐付ける
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/ai-support.js"></script>
+
+    <!-- サイドメニュー開閉スクリプト -->
+    <script>
+        const sidebar = document.getElementById('sidebar')
+        const mainContent = document.getElementById('mainContent')
+        const toggleBtn = document.getElementById('toggleBtn')
+        const toggleIcon = document.getElementById('toggleIcon')
+        const logoText = document.getElementById('logoText')
+        const menuTexts = document.querySelectorAll('.menu-text')
+
+        let isOpen = true
+
+        toggleBtn.addEventListener('click', () => {
+            isOpen = !isOpen
+
+            if (isOpen) {
+                sidebar.classList.remove('w-16')
+                sidebar.classList.add('w-56')
+                mainContent.classList.remove('ml-16')
+                mainContent.classList.add('ml-56')
+                toggleIcon.classList.remove('rotate-180')
+                logoText.classList.remove('hidden')
+                menuTexts.forEach(el => el.classList.remove('hidden'))
+            } else {
+                sidebar.classList.remove('w-56')
+                sidebar.classList.add('w-16')
+                mainContent.classList.remove('ml-56')
+                mainContent.classList.add('ml-16')
+                toggleIcon.classList.add('rotate-180')
+                logoText.classList.add('hidden')
+                menuTexts.forEach(el => el.classList.add('hidden'))
+            }
+        })
+    </script>
+</body>
+
+</html>

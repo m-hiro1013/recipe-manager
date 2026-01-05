@@ -33,6 +33,15 @@ const unitCostPreview = document.getElementById('unitCostPreview')
 const unitCostFormula = document.getElementById('unitCostFormula')
 const itemGenre = document.getElementById('itemGenre')
 const itemNeedsReview = document.getElementById('itemNeedsReview')
+const tabProductMode = document.getElementById('tabProductMode')
+const tabManualMode = document.getElementById('tabManualMode')
+const productModeSection = document.getElementById('productModeSection')
+const manualModeSection = document.getElementById('manualModeSection')
+const manualTotalQuantity = document.getElementById('manualTotalQuantity')
+const manualTotalUnit = document.getElementById('manualTotalUnit')
+const manualTotalPrice = document.getElementById('manualTotalPrice')
+const manualUnitCostPreview = document.getElementById('manualUnitCostPreview')
+const manualUnitCostFormula = document.getElementById('manualUnitCostFormula')
 
 // 商品選択モーダル
 const productSelectModal = document.getElementById('productSelectModal')
@@ -59,6 +68,17 @@ const editItemGenre = document.getElementById('editItemGenre')
 const editItemNeedsReview = document.getElementById('editItemNeedsReview')
 const openEditProductSelectModalBtn = document.getElementById('openEditProductSelectModal')
 const editProductCode = document.getElementById('editProductCode')
+const editManualPriceMode = document.getElementById('editManualPriceMode')
+const editProductSelectSection = document.getElementById('editProductSelectSection')
+const editManualPriceInfo = document.getElementById('editManualPriceInfo')
+const editManualTotalQuantity = document.getElementById('editManualTotalQuantity')
+const editManualTotalUnit = document.getElementById('editManualTotalUnit')
+const editManualTotalPrice = document.getElementById('editManualTotalPrice')
+const editManualUnitCostPreview = document.getElementById('editManualUnitCostPreview')
+const editManualUnitCostFormula = document.getElementById('editManualUnitCostFormula')
+const editManualPriceModeInput = document.getElementById('editManualPriceMode')
+const editYieldQuantitySection = document.getElementById('editYieldQuantitySection')
+const editUnitCostPreviewSection = document.getElementById('editUnitCostPreviewSection')
 
 // ============================================
 // 状態管理
@@ -74,7 +94,7 @@ let expandedSupplier = null
 let allGenres = []
 let reviewFilterMode = 'all'
 let isEditProductMode = false // 編集モーダル用の商品選択かどうか
-
+let currentCreateMode = 'product' // 'product' or 'manual'
 // ============================================
 // 初期化
 // ============================================
@@ -117,7 +137,28 @@ function setupEventListeners() {
         createModal.classList.add('hidden')
     })
 
+    // タブ切り替え（仕入れ商品モード）
+    tabProductMode.addEventListener('click', () => {
+        switchCreateMode('product')
+    })
 
+    // タブ切り替え（手動入力モード）
+    tabManualMode.addEventListener('click', () => {
+        switchCreateMode('manual')
+    })
+
+    // 使用単位の入力で手動モードの単位も連動
+    itemUnit.addEventListener('input', (e) => {
+        manualTotalUnit.value = e.target.value
+    })
+
+    // 手動単価プレビュー更新（作成）
+    manualTotalQuantity.addEventListener('input', updateManualUnitCostPreview)
+    manualTotalPrice.addEventListener('input', updateManualUnitCostPreview)
+
+    // 手動単価プレビュー更新（編集）
+    editManualTotalQuantity.addEventListener('input', updateEditManualUnitCostPreview)
+    editManualTotalPrice.addEventListener('input', updateEditManualUnitCostPreview)
 
     // 商品選択モーダル
     openProductSelectModalBtn.addEventListener('click', () => {
@@ -326,6 +367,12 @@ function updateStats() {
 // アイテムの単位原価を取得（計算）
 // ============================================
 function getItemUnitCost(item) {
+    // 手動単価の場合
+    if (item.manual_price && item.manual_unit_cost !== null && item.manual_unit_cost !== undefined) {
+        return item.manual_unit_cost
+    }
+
+    // 通常の場合：仕入れ単価 ÷ 取れる数
     const productPrice = item.products?.unit_price || 0
     return calculateItemUnitCost(productPrice, item.yield_quantity)
 }
@@ -415,6 +462,7 @@ function renderItems() {
             const unitCost = getItemUnitCost(item)
             const needsReviewClass = item.needs_review ? 'text-red-600' : 'text-gray-800'
             const needsReviewBadge = item.needs_review ? '<span class="text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded font-bold ml-2">要確認</span>' : ''
+            const manualPriceBadge = item.manual_price ? '<span class="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded font-bold ml-2">🔁 手動単価</span>' : ''
 
             html += `
                 <div class="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer item-row ${item.needs_review ? 'border-red-300 bg-red-50' : ''}" data-item-id="${item.item_id}">
@@ -422,6 +470,7 @@ function renderItems() {
                         <div class="flex items-center gap-3 mb-1">
                             <span class="font-bold ${needsReviewClass} truncate">${item.item_name}</span>
                             ${needsReviewBadge}
+                            ${manualPriceBadge}
                             <span class="text-sm px-2 py-0.5 bg-blue-100 text-blue-700 rounded flex-shrink-0">${item.unit}</span>
                         </div>
                         ${item.item_kana ? `<div class="text-xs text-gray-400 mb-1">${item.item_kana}</div>` : ''}
@@ -630,9 +679,101 @@ function updateEditUnitCostPreview() {
 }
 
 // ============================================
+// 作成モード切り替え
+// ============================================
+function switchCreateMode(mode) {
+    currentCreateMode = mode
+
+    // タブのスタイル更新
+    if (mode === 'product') {
+        tabProductMode.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300')
+        tabProductMode.classList.add('bg-blue-600', 'text-white')
+        tabManualMode.classList.remove('bg-blue-600', 'text-white')
+        tabManualMode.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300')
+
+        // セクション表示切り替え
+        productModeSection.classList.remove('hidden')
+        manualModeSection.classList.add('hidden')
+
+        // 手動モードの入力をクリア（モード固有項目のみ）
+        manualTotalQuantity.value = ''
+        manualTotalPrice.value = ''
+        manualUnitCostPreview.textContent = '---'
+        manualUnitCostFormula.textContent = ''
+
+    } else {
+        tabManualMode.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300')
+        tabManualMode.classList.add('bg-blue-600', 'text-white')
+        tabProductMode.classList.remove('bg-blue-600', 'text-white')
+        tabProductMode.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300')
+
+        // セクション表示切り替え
+        productModeSection.classList.add('hidden')
+        manualModeSection.classList.remove('hidden')
+
+        // 使用単位を手動モードの単位にコピー
+        manualTotalUnit.value = itemUnit.value
+
+        // 仕入れ商品モードの入力をクリア（モード固有項目のみ）
+        selectedProductCode.value = ''
+        selectedProductPrice.value = ''
+        selectedProductIsActive.value = ''
+        selectedProductText.textContent = 'クリックして商品を選択...'
+        selectedProductText.classList.add('text-gray-400')
+        selectedProductText.classList.remove('text-gray-800')
+        productInfo.textContent = ''
+        yieldQuantity.value = ''
+        unitCostPreview.textContent = '---'
+        unitCostFormula.textContent = ''
+    }
+}
+
+// ============================================
+// 手動単価プレビュー更新（作成）
+// ============================================
+function updateManualUnitCostPreview() {
+    const qty = parseFloat(manualTotalQuantity.value) || 0
+    const price = parseFloat(manualTotalPrice.value) || 0
+
+    if (qty > 0) {
+        const unitCost = price / qty
+        manualUnitCostPreview.textContent = `¥${unitCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+        manualUnitCostFormula.textContent = `¥${price.toLocaleString()} ÷ ${qty} = ¥${unitCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+    } else {
+        manualUnitCostPreview.textContent = '---'
+        manualUnitCostFormula.textContent = ''
+    }
+}
+
+// ============================================
+// 手動単価プレビュー更新（編集）
+// ============================================
+function updateEditManualUnitCostPreview() {
+    const qty = parseFloat(editManualTotalQuantity.value) || 0
+    const price = parseFloat(editManualTotalPrice.value) || 0
+
+    if (qty > 0) {
+        const unitCost = price / qty
+        editManualUnitCostPreview.textContent = `¥${unitCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+        editManualUnitCostFormula.textContent = `¥${price.toLocaleString()} ÷ ${qty} = ¥${unitCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+    } else {
+        editManualUnitCostPreview.textContent = '---'
+        editManualUnitCostFormula.textContent = ''
+    }
+}
+
+// ============================================
 // 作成フォームリセット
 // ============================================
 function resetCreateForm() {
+    // 共通項目クリア
+    itemName.value = ''
+    itemKana.value = ''
+    itemGenre.value = ''
+    itemUnit.value = ''
+    itemNeedsReview.checked = false
+
+    // 仕入れ商品モードの項目クリア
     selectedProductCode.value = ''
     selectedProductPrice.value = ''
     selectedProductIsActive.value = ''
@@ -640,13 +781,18 @@ function resetCreateForm() {
     selectedProductText.classList.add('text-gray-400')
     selectedProductText.classList.remove('text-gray-800')
     productInfo.textContent = ''
-    itemGenre.value = ''
-    itemName.value = ''
-    itemKana.value = ''
-    itemUnit.value = ''
     yieldQuantity.value = ''
     unitCostPreview.textContent = '---'
     unitCostFormula.textContent = ''
+
+    // 手動入力モードの項目クリア
+    manualTotalQuantity.value = ''
+    manualTotalUnit.value = ''
+    manualTotalPrice.value = ''
+    manualUnitCostPreview.textContent = '---'
+    manualUnitCostFormula.textContent = ''
+
+    // ボタン状態リセット
     submitCreateBtn.disabled = false
     submitCreateBtn.textContent = '作成する'
 
@@ -655,8 +801,10 @@ function resetCreateForm() {
     const radio = document.querySelector('input[name="productFilter"][value="unregistered"]')
     if (radio) radio.checked = true
     productSearchQuery = ''
-    itemNeedsReview.checked = false
     expandedSupplier = null
+
+    // モードを仕入れ商品モードに戻す
+    switchCreateMode('product')
 }
 
 // ============================================
@@ -669,12 +817,42 @@ function openEditModal(itemId) {
     const product = item.products
 
     editItemId.value = item.item_id
-    editProductPrice.value = product?.unit_price || 0
-    // 商品コードもセット
     editProductCode.value = item.product_code || ''
-    editProductInfo.textContent = product
-        ? `${product.supplier_name} / ${product.product_name}（${product.specification || '-'}）- ¥${(product.unit_price || 0).toLocaleString()}`
-        : '（商品情報なし）'
+    editManualPriceModeInput.value = item.manual_price ? 'true' : 'false'
+
+    // 手動単価モードかどうかで表示を切り替え
+    if (item.manual_price) {
+        // 手動単価モード
+        editManualPriceInfo.classList.remove('hidden')
+        editProductSelectSection.classList.add('hidden')
+        editYieldQuantitySection.classList.add('hidden')
+        editUnitCostPreviewSection.classList.add('hidden')
+
+        // 総量 = yield_quantity、単位 = unit、金額 = manual_unit_cost * yield_quantity
+        editManualTotalQuantity.value = item.yield_quantity || ''
+        editManualTotalUnit.value = item.unit || ''
+        const totalPrice = (item.manual_unit_cost || 0) * (item.yield_quantity || 1)
+        editManualTotalPrice.value = totalPrice || ''
+
+        updateEditManualUnitCostPreview()
+        editProductPrice.value = ''
+    } else {
+        // 通常モード
+        editManualPriceInfo.classList.add('hidden')
+        editProductSelectSection.classList.remove('hidden')
+        editYieldQuantitySection.classList.remove('hidden')
+        editUnitCostPreviewSection.classList.remove('hidden')
+
+        editProductPrice.value = product?.unit_price || 0
+        editProductInfo.textContent = product
+            ? `${product.supplier_name} / ${product.product_name}（${product.specification || '-'}）- ¥${(product.unit_price || 0).toLocaleString()}`
+            : '（商品情報なし）'
+
+        editManualTotalQuantity.value = ''
+        editManualTotalUnit.value = ''
+        editManualTotalPrice.value = ''
+    }
+
     editItemGenre.value = item.genre_id || ''
     editItemName.value = item.item_name
     editItemKana.value = item.item_kana || ''
@@ -690,25 +868,15 @@ function openEditModal(itemId) {
 // アイテム作成
 // ============================================
 async function createItem() {
-    const code = selectedProductCode.value
-    const genreIdValue = itemGenre.value
+    const isManualPrice = currentCreateMode === 'manual'
     const name = itemName.value.trim()
     const kana = toHalfWidthKatakana(itemKana.value.trim())
+    const genreIdValue = itemGenre.value
     const unit = itemUnit.value.trim()
-    const qty = parseFloat(yieldQuantity.value)
-    const isActive = selectedProductIsActive.value === 'true'
     const businessTypeId = getCurrentBusinessTypeId()
     const needsReview = itemNeedsReview.checked
 
-    // バリデーション
-    if (!code) {
-        alert('仕入れ商品を選択してください')
-        return
-    }
-    if (!genreIdValue) {
-        alert('ジャンルを選択してください')
-        return
-    }
+    // 共通バリデーション
     if (!name) {
         alert('アイテム名を入力してください')
         return
@@ -717,55 +885,99 @@ async function createItem() {
         alert('読み仮名を入力してください')
         return
     }
+    if (!genreIdValue) {
+        alert('ジャンルを選択してください')
+        return
+    }
     if (!unit) {
         alert('使用単位を入力してください')
         return
     }
-    if (!qty || qty <= 0) {
-        alert('取れる数を正しく入力してください')
-        return
+
+    // モード別バリデーション
+    if (isManualPrice) {
+        const manualQty = parseFloat(manualTotalQuantity.value)
+        if (!manualQty || manualQty <= 0) {
+            alert('総量を入力してください')
+            return
+        }
+    } else {
+        const code = selectedProductCode.value
+        const qty = parseFloat(yieldQuantity.value)
+        if (!code) {
+            alert('仕入れ商品を選択してください')
+            return
+        }
+        if (!qty || qty <= 0) {
+            alert('取れる数を正しく入力してください')
+            return
+        }
     }
 
     submitCreateBtn.disabled = true
     submitCreateBtn.textContent = '作成中...'
 
-    // 使用OFFの場合は自動でONにする
-    if (!isActive) {
-        const { error: updateError } = await supabase
-            .from('products')
-            .update({ is_active: true })
-            .eq('product_code', code)
-
-        if (updateError) {
-            console.error('商品フラグ更新エラー:', updateError)
-        }
-    }
-
-    // business_type_idを追加
-    const { error } = await supabase
-        .from('items')
-        .insert({
+    try {
+        // 登録データ作成
+        const insertData = {
             item_name: name,
             item_kana: kana,
-            product_code: code,
             genre_id: parseInt(genreIdValue),
             unit: unit,
-            yield_quantity: qty,
             business_type_id: businessTypeId,
-            needs_review: needsReview
-        })
+            needs_review: needsReview,
+            manual_price: isManualPrice
+        }
 
-    if (error) {
+        if (isManualPrice) {
+            // 手動入力モード
+            const manualQty = parseFloat(manualTotalQuantity.value)
+            const manualPrice = parseFloat(manualTotalPrice.value) || 0
+
+            insertData.product_code = null
+            insertData.yield_quantity = manualQty
+            insertData.manual_unit_cost = manualPrice / manualQty
+        } else {
+            // 仕入れ商品モード
+            const code = selectedProductCode.value
+            const qty = parseFloat(yieldQuantity.value)
+            const isActive = selectedProductIsActive.value === 'true'
+
+            // 使用OFFの場合は自動でONにする
+            if (!isActive) {
+                const { error: updateError } = await supabase
+                    .from('product_business_types')
+                    .update({ is_active: true })
+                    .eq('product_code', code)
+                    .eq('business_type_id', businessTypeId)
+
+                if (updateError) {
+                    console.error('商品フラグ更新エラー:', updateError)
+                }
+            }
+
+            insertData.product_code = code
+            insertData.yield_quantity = qty
+            insertData.manual_unit_cost = null
+        }
+
+        const { error } = await supabase
+            .from('items')
+            .insert(insertData)
+
+        if (error) throw error
+
+        createModal.classList.add('hidden')
+        resetCreateForm()
+        await loadData()
+
+    } catch (error) {
         console.error('アイテム作成エラー:', error)
         alert('作成に失敗しました: ' + error.message)
+    } finally {
         submitCreateBtn.disabled = false
         submitCreateBtn.textContent = '作成する'
-        return
     }
-
-    createModal.classList.add('hidden')
-    resetCreateForm()
-    await loadData()
 }
 
 // ============================================
@@ -773,6 +985,7 @@ async function createItem() {
 // ============================================
 async function updateItem() {
     const itemId = parseInt(editItemId.value)
+    const isManualPrice = editManualPriceModeInput.value === 'true'
     const genreIdValue = editItemGenre.value
     const name = editItemName.value.trim()
     const kana = toHalfWidthKatakana(editItemKana.value.trim())
@@ -780,7 +993,20 @@ async function updateItem() {
     const qty = parseFloat(editYieldQuantity.value)
     const needsReview = editItemNeedsReview.checked
 
+    // 手動単価モード用
+    const manualQty = parseFloat(editManualTotalQuantity.value)
+    const manualUnit = editManualTotalUnit.value.trim()
+    const manualPrice = parseFloat(editManualTotalPrice.value) || 0
+
     // バリデーション
+    if (isManualPrice && (!manualQty || manualQty <= 0)) {
+        alert('総量を入力してください')
+        return
+    }
+    if (isManualPrice && !manualUnit) {
+        alert('単位を入力してください')
+        return
+    }
     if (!genreIdValue) {
         alert('ジャンルを選択してください')
         return
@@ -793,11 +1019,11 @@ async function updateItem() {
         alert('読み仮名を入力してください')
         return
     }
-    if (!unit) {
+    if (!isManualPrice && !unit) {
         alert('使用単位を入力してください')
         return
     }
-    if (!qty || qty <= 0) {
+    if (!isManualPrice && (!qty || qty <= 0)) {
         alert('取れる数を正しく入力してください')
         return
     }
@@ -805,33 +1031,47 @@ async function updateItem() {
     submitEditBtn.disabled = true
     submitEditBtn.textContent = '更新中...'
 
-    // 商品コードが変更されているか確認
-    const newProductCode = editProductCode.value
-    const newProduct = allProducts.find(p => p.product_code === newProductCode)
+    // 更新データ作成
+    const updateData = {
+        item_name: name,
+        item_kana: kana,
+        genre_id: parseInt(genreIdValue),
+        unit: unit,
+        needs_review: needsReview
+    }
 
-    // 使用OFFの商品なら自動でONにする
-    if (newProduct && !newProduct.is_active) {
-        const { error: updateError } = await supabase
-            .from('products')
-            .update({ is_active: true })
-            .eq('product_code', newProductCode)
+    if (isManualPrice) {
+        // 手動単価モード
+        updateData.unit = manualUnit
+        updateData.yield_quantity = manualQty
+        updateData.manual_unit_cost = manualPrice / manualQty
+    } else {
+        // 通常モード
+        updateData.unit = unit
+        updateData.yield_quantity = qty
 
-        if (updateError) {
-            console.error('商品フラグ更新エラー:', updateError)
+        // 商品コードが変更されているか確認
+        const newProductCode = editProductCode.value
+        const newProduct = allProducts.find(p => p.product_code === newProductCode)
+
+        // 使用OFFの商品なら自動でONにする
+        if (newProduct && !newProduct.is_active) {
+            const { error: updateError } = await supabase
+                .from('products')
+                .update({ is_active: true })
+                .eq('product_code', newProductCode)
+
+            if (updateError) {
+                console.error('商品フラグ更新エラー:', updateError)
+            }
         }
+
+        updateData.product_code = newProductCode
     }
 
     const { error } = await supabase
         .from('items')
-        .update({
-            item_name: name,
-            item_kana: kana,
-            genre_id: parseInt(genreIdValue),
-            unit: unit,
-            yield_quantity: qty,
-            needs_review: needsReview,
-            product_code: newProductCode  // ← 追加
-        })
+        .update(updateData)
         .eq('item_id', itemId)
 
     if (error) {

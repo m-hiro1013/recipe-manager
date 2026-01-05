@@ -100,7 +100,13 @@ export function getIngredientUnitCost(type, id, allItems, allPreparations, visit
     if (type === 'item') {
         const item = allItems.find(i => i.item_id === id)
         if (!item) return 0
-        // 仕入れ単価から計算
+
+        // 手動単価の場合はmanual_unit_costを使用
+        if (item.manual_price && item.manual_unit_cost !== null && item.manual_unit_cost !== undefined) {
+            return item.manual_unit_cost
+        }
+
+        // 通常の場合は仕入れ単価から計算
         const productPrice = item.products?.unit_price || 0
         return calculateItemUnitCost(productPrice, item.yield_quantity)
     } else if (type === 'preparation') {

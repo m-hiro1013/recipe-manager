@@ -1,7 +1,8 @@
 import { supabase } from './supabase.js'
 import { calculateItemUnitCost, calculatePreparationCost, getIngredientUnitCost } from './costCalculator.js'
 import { initBusinessTypeSelector, getCurrentBusinessTypeId } from './businessType.js'
-import { toHalfWidthKatakana, sanitizeToFullWidthKatakana, normalizeForSearch, getIngredientName, getIngredientUnit, prepHasNeedsReviewIngredient, getNeedsReviewIngredientList, fetchAllWithPaging, withBusinessTypeFilter, IngredientModalManager, QuickItemModalManager, renderIngredientList } from './utils.js'
+import { toHalfWidthKatakana, sanitizeToFullWidthKatakana, normalizeForSearch, getIngredientName, getIngredientUnit, prepHasNeedsReviewIngredient, getNeedsReviewIngredientList, fetchAllWithPaging, withBusinessTypeFilter, renderIngredientList } from './utils.js'
+import { IngredientModalManager, QuickItemModalManager } from './modalManagers.js'
 // ============================================
 // DOM要素の取得
 // ============================================
@@ -30,41 +31,6 @@ const unitCostPreview = document.getElementById('unitCostPreview')
 const preparationSection = document.getElementById('preparationSection')
 const preparationNeedsReview = document.getElementById('preparationNeedsReview')
 
-// 材料選択モーダル
-const ingredientModal = document.getElementById('ingredientModal')
-const closeIngredientModalBtn = document.getElementById('closeIngredientModal')
-const tabItems = document.getElementById('tabItems')
-const tabPreparations = document.getElementById('tabPreparations')
-const tabProducts = document.getElementById('tabProducts')
-const tabContentItems = document.getElementById('tabContentItems')
-const tabContentPreparations = document.getElementById('tabContentPreparations')
-const tabContentProducts = document.getElementById('tabContentProducts')
-const itemSearchInput = document.getElementById('itemSearchInput')
-const prepSearchInput = document.getElementById('prepSearchInput')
-const productSearchInput = document.getElementById('productSearchInput')
-const supplierSelect = document.getElementById('supplierSelect')
-const itemSelectList = document.getElementById('itemSelectList')
-const prepSelectList = document.getElementById('prepSelectList')
-const productSelectList = document.getElementById('productSelectList')
-const selectedCount = document.getElementById('selectedCount')
-const addSelectedIngredientsBtn = document.getElementById('addSelectedIngredients')
-
-// クイックアイテム作成モーダル
-const quickItemModal = document.getElementById('quickItemModal')
-const closeQuickItemModalBtn = document.getElementById('closeQuickItemModal')
-const cancelQuickItemBtn = document.getElementById('cancelQuickItem')
-const submitQuickItemBtn = document.getElementById('submitQuickItem')
-const quickProductCode = document.getElementById('quickProductCode')
-const quickProductPrice = document.getElementById('quickProductPrice')
-const quickProductInfo = document.getElementById('quickProductInfo')
-const quickItemName = document.getElementById('quickItemName')
-const quickItemKana = document.getElementById('quickItemKana')
-const quickItemUnit = document.getElementById('quickItemUnit')
-const quickYieldQuantity = document.getElementById('quickYieldQuantity')
-const quickUnitCostPreview = document.getElementById('quickUnitCostPreview')
-const quickItemGenre = document.getElementById('quickItemGenre')
-const quickItemNeedsReview = document.getElementById('quickItemNeedsReview')
-
 // 編集モーダル
 const editModal = document.getElementById('editModal')
 const closeEditModalBtn = document.getElementById('closeEditModal')
@@ -83,7 +49,6 @@ const editTotalCostPreview = document.getElementById('editTotalCostPreview')
 const editUnitCostPreview = document.getElementById('editUnitCostPreview')
 const editPreparationSection = document.getElementById('editPreparationSection')
 const editPreparationNeedsReview = document.getElementById('editPreparationNeedsReview')
-
 // ============================================
 // 状態管理
 // ============================================
@@ -124,24 +89,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ============================================
 function initIngredientModalManager() {
     ingredientModalManager = new IngredientModalManager({
-        // DOM要素
-        ingredientModal: document.getElementById('ingredientModal'),
-        parentModal: createModal, // 初期値は作成モーダル
-        tabItems: document.getElementById('tabItems'),
-        tabPreparations: document.getElementById('tabPreparations'),
-        tabProducts: document.getElementById('tabProducts'),
-        tabContentItems: document.getElementById('tabContentItems'),
-        tabContentPreparations: document.getElementById('tabContentPreparations'),
-        tabContentProducts: document.getElementById('tabContentProducts'),
-        itemSearchInput: document.getElementById('itemSearchInput'),
-        prepSearchInput: document.getElementById('prepSearchInput'),
-        productSearchInput: document.getElementById('productSearchInput'),
-        supplierSelect: document.getElementById('supplierSelect'),
-        itemSelectList: document.getElementById('itemSelectList'),
-        prepSelectList: document.getElementById('prepSelectList'),
-        productSelectList: document.getElementById('productSelectList'),
-        selectedCount: document.getElementById('selectedCount'),
-        addSelectedIngredientsBtn: document.getElementById('addSelectedIngredients'),
+        // 親モーダル（初期値は作成モーダル）
+        parentModal: createModal,
 
         // データ参照
         getAllItems: () => allItems,
@@ -179,10 +128,14 @@ function initIngredientModalManager() {
         },
         onQuickItemCreate: (row) => {
             quickItemModalManager.open(row)
+        },
+        onQuickItemManualCreate: () => {
+            quickItemModalManager.openManualMode()
         }
     })
 
-    ingredientModalManager.setupEventListeners()
+    // モーダルHTMLを生成（setupEventListenersはcreateModal内で自動的に呼ばれる）
+    ingredientModalManager.createModal()
 }
 
 // ============================================
@@ -190,22 +143,6 @@ function initIngredientModalManager() {
 // ============================================
 function initQuickItemModalManager() {
     quickItemModalManager = new QuickItemModalManager({
-        // DOM要素
-        quickItemModal: document.getElementById('quickItemModal'),
-        closeQuickItemModalBtn: document.getElementById('closeQuickItemModal'),
-        cancelQuickItemBtn: document.getElementById('cancelQuickItem'),
-        submitQuickItemBtn: document.getElementById('submitQuickItem'),
-        quickProductCode: document.getElementById('quickProductCode'),
-        quickProductPrice: document.getElementById('quickProductPrice'),
-        quickProductInfo: document.getElementById('quickProductInfo'),
-        quickItemName: document.getElementById('quickItemName'),
-        quickItemKana: document.getElementById('quickItemKana'),
-        quickItemUnit: document.getElementById('quickItemUnit'),
-        quickYieldQuantity: document.getElementById('quickYieldQuantity'),
-        quickUnitCostPreview: document.getElementById('quickUnitCostPreview'),
-        quickItemGenre: document.getElementById('quickItemGenre'),
-        quickItemNeedsReview: document.getElementById('quickItemNeedsReview'),
-
         // データ参照
         getAllProducts: () => allProducts,
         getAllGenres: () => allGenres,
@@ -227,7 +164,8 @@ function initQuickItemModalManager() {
         }
     })
 
-    quickItemModalManager.setupEventListeners()
+    // モーダルHTMLを生成
+    quickItemModalManager.createModal()
 }
 
 // ============================================
@@ -276,9 +214,7 @@ function setupEventListeners() {
         ingredientModalManager.open()
     })
 
-    closeIngredientModalBtn.addEventListener('click', () => {
-        ingredientModalManager.close()
-    })
+    // ※ closeIngredientModalBtn のイベントリスナーは削除（IngredientModalManager内で管理）
 
     // 読み仮名の変換（仕込み品作成・フォーカスが外れたとき)
     preparationKana.addEventListener('blur', (e) => {
@@ -422,8 +358,13 @@ async function loadData() {
         console.error('取引先取得エラー:', suppliersError)
     }
 
-    // 業者プルダウンを生成
-    renderSupplierSelect()
+    // 取得したデータを変数に代入
+    allPreparations = preparations || []
+    allItems = items || []
+    allProducts = productsData
+    allSuppliers = suppliers || []
+
+
 
     updateStats()
     renderPreparations()
@@ -451,7 +392,7 @@ function renderSectionSelect() {
 // クイックアイテム用ジャンルセレクト生成
 // ============================================
 function renderQuickItemGenreSelect() {
-    if (quickItemModalManager) {
+    if (quickItemModalManager && quickItemModalManager.isModalCreated) {
         quickItemModalManager.renderGenreSelect()
     }
 }
@@ -464,15 +405,6 @@ function updateStats() {
     itemCount.textContent = `${allItems.length} 件`
 }
 
-// ============================================
-// 業者プルダウン生成
-// ============================================
-function renderSupplierSelect() {
-    supplierSelect.innerHTML = '<option value="">全て</option>'
-    allSuppliers.forEach(supplier => {
-        supplierSelect.innerHTML += `<option value="${supplier.supplier_name}">${supplier.supplier_name}</option>`
-    })
-}
 
 
 // ============================================
@@ -647,6 +579,7 @@ function renderEditIngredientList() {
         }
     })
 }
+
 // ============================================
 // 作成フォーム：原価プレビュー更新
 // ============================================

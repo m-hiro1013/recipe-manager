@@ -17,6 +17,7 @@
 # - 外部連携仕様（CSVインポート仕様等）
 # - 認証方針
 # - プロジェクト固有の制約・ルール
+# - 新機能の要件定義（AIサポート等）
 #
 # 【このファイルに書かないこと】
 # - AIの振る舞いやルール → SYSTEM_PROMPT.yaml
@@ -34,6 +35,7 @@
 # - 環境情報（URL等）が変わったとき
 # - ビジネスロジックの根本が変わったとき
 # - 外部連携仕様が追加・変更されたとき
+# - 新機能の要件定義が完了したとき
 # ※ 進捗や決定事項の更新はWORKFLOW.yamlへ
 #
 # 【セクション構成】
@@ -46,13 +48,14 @@
 # 7. 外部連携仕様
 # 8. 認証方針
 # 9. プロジェクト固有の制約
+# 10. AIサポート機能（新機能）
 #
 # =====================================
 
 
 project_specific:
-  version: "1.0"
-  last_updated: "2025-12-28"
+  version: "1.1"
+  last_updated: "2026-01-02"
 
 
 # =====================================
@@ -107,6 +110,11 @@ tech_stack:
   deploy: "Vercel"
   version_control: "Git + GitHub"
   
+  ai_api:
+    service: "Gemini 1.5 Flash"
+    purpose: "AIサポート機能（レシピ読み取り・材料紐付け）"
+    execution: "Supabase Edge Functions"
+  
   constraints:
     - name: "localStorage禁止"
       reason: "データは全てSupabaseに保存する方針"
@@ -136,6 +144,8 @@ environment:
     local:
       - name: "VITE_SUPABASE_URL"
       - name: "VITE_SUPABASE_ANON_KEY"
+      - name: "GEMINI_API_KEY"
+        note: "Supabase Edge Functionsのシークレットとして設定"
   
   vscode_extensions:
     - "Japanese Language Pack"
@@ -314,3 +324,152 @@ project_constraints:
   - name: "全業態共通項目の変更時は確認メッセージ"
     target: ["products", "suppliers", "settings"]
     message: "この変更は全業態に反映されます"
+  
+  - name: "検索は部分一致を採用"
+    reason: "短いキーワードでもヒットしやすくするため"
+    implementation: "LIKE %keyword% または ilike で検索"
+
+
+# =====================================
+# 10. AIサポート機能（新機能）
+# =====================================
+ai_support:
+  name: "AIサポート"
+  status: "planned"
+  description: "レシピ資料からAIが情報を読み取り、仕込み品/商品の登録をサポートする機能"
+  
+  # ページ情報
+  page:
+    path: "/ai-support.html"
+    menu_icon: "🤖"
+    menu_position: "マスタ管理の上（区切り線の上）"
+  
+  # 対応ファイル形式
+  supported_formats:
+    - "PPT（PowerPoint）"
+    - "Excel"
+    - "画像（写真・スクリーンショット）"
+    - "PDF"
+  
+  # AI API設定
+  ai_api:
+    service: "Gemini 1.5 Flash"
+    selection_reason:
+      - "応答スピードが最速（約163トークン/秒）"
+      - "画像読み取り対応"
+      - "料金が安い"
+      - "精度も十分"
+    execution: "Supabase Edge Functions"
+    security:
+      - "APIキーはサーバー側（Edge Functions）で管理"
+      - "フロントには露出しない"
+      - "学習には使用されない（API経由は対象外）"
+      - "データ保持期間：55日（不正利用監視のみ）"
+  
+  # 処理フロー
+  flow:
+    step1:
+      name: "ファイルアップロード"
+      description: "PPT/Excel/画像/PDFをアップロード"
+    
+    step2:
+      name: "レシピ選択"
+      description: "複数レシピがある場合、どれを登録するか選択"
+      features:
+        - "AIが読み取ったレシピ一覧を表示"
+        - "登録済みの可能性があるものは⚠️警告表示"
+        - "警告があっても続行可能（別物の可能性があるため）"
+    
+    step3:
+      name: "種別選択 + 基本情報入力"
+      inputs:
+        - field: "種別"
+          options: ["仕込み品", "商品"]
+          required: true
+        - field: "名前"
+          initial_value: "AIが読み取った値"
+          required: true
+        - field: "読み仮名"
+          initial_value: "AIが生成した値"
+          required: true
+        - field: "セクション"
+          initial_value: "手動選択"
+          required: true
+        - field: "仕上がり量"
+          condition: "仕込み品のみ"
+          required: true
+        - field: "仕上がり単位"
+          condition: "仕込み品のみ"
+          required: true
+        - field: "売価"
+          condition: "商品のみ"
+          required: false
+    
+    step4:
+      name: "材料リスト確認"
+      description: "AIが読み取った材料名を確認・修正"
+      note: "この時点では名前だけ、分量は後で"
+    
+    step5:
+      name: "材料の紐付け"
+      description: "各材料を既存のアイテム/仕込み品と紐付け"
+      ui:
+        layout: "材料リスト表示、各行に[🤖 AIで探す][🔍 自分で探す]ボタン"
+        modal: "1個ずつモーダルで紐付け（集中できる）"
+        completed: "完了した材料は✅表示"
+    
+    step6:
+      name: "分量・単位の確認/修正"
+      description: "全材料の分量・単位をリスト表示、修正可能"
+      ui: "テーブル形式で一覧表示、インライン編集"
+    
+    step7:
+      name: "登録完了"
+      description: "登録完了後、続けて追加するか選択"
+      ui:
+        message: "「〇〇」を商品として登録しました"
+        options:
+          - "続けて追加（未登録レシピリスト表示）"
+          - "終了する"
+  
+  # 紐付けモーダル仕様
+  ingredient_modal:
+    template: "固定テンプレート（事前に作成）"
+    ai_role: "候補データをパラメータとして返すだけ"
+    sections:
+      - name: "アイテムから選ぶ"
+        source: "items テーブル"
+      - name: "仕入れ商品から作成"
+        source: "products テーブル"
+        action: "新規アイテム作成して紐付け"
+      - name: "該当なし"
+        action: "手動で選択"
+    buttons:
+      - label: "🤖 AIで探す"
+        action: "AIが候補を検索してモーダル表示"
+      - label: "🔍 自分で探す"
+        action: "既存の材料選択モーダルを開く"
+  
+  # 検索ロジック
+  search_logic:
+    method: "部分一致"
+    ai_keyword_generation:
+      description: "AIが類義語・表記ゆれを推測して短いキーワードを複数生成"
+      keyword_length: "2〜5文字程度"
+      examples:
+        input: "鯛のカルパッチョ"
+        output: ["カルパッチョ", "鯛", "たい", "タイ", "真鯛"]
+      features:
+        - "類義語推測"
+        - "表記ゆれ対応（ひらがな/カタカナ/漢字）"
+    db_search:
+      method: "各キーワードで部分一致検索"
+      deduplication: "重複排除してリスト化"
+  
+  # 重複検知
+  duplicate_detection:
+    timing: "STEP2（レシピ選択時）"
+    method: "既存の仕込み品/商品名と部分一致で検索"
+    display: "⚠️ 似た名前が登録済み"
+    behavior: "警告のみ、続行可能"
+    reason: "同じ名前でも業態やアレンジ違いの可能性があるため"

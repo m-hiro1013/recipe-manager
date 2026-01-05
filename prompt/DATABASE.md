@@ -64,7 +64,7 @@
 | 項目 | 値 |
 |------|-----|
 | データベース | Supabase (PostgreSQL) |
-| 最終更新日 | 2025-12-28 |
+| 最終更新日 | 2026-01-03 |
 | 更新者 | ひろきくん |
 
 ---
@@ -89,6 +89,7 @@
 | course_items | コースの商品 | ❌ |
 | business_types | 業態 | ❌ |
 | settings | システム設定 | ❌ |
+| ai_support_sessions | AIサポートのセッション保存 | ❌ |
 
 ---
 
@@ -195,11 +196,13 @@
 | item_id | SERIAL | PK | 主キー（自動採番） |
 | item_name | TEXT | NOT NULL | アイテム名 |
 | item_kana | TEXT | | 読み仮名（半角カタカナ） |
-| product_code | TEXT | FK → products(product_code) | 仕入れ商品への参照 |
+| product_code | TEXT | FK → products(product_code) | 仕入れ商品への参照（NULLの場合は手動単価） |
 | genre_id | INTEGER | FK → item_genres(genre_id) | ジャンルへの参照 |
 | unit | TEXT | NOT NULL | 使用単位 |
 | yield_quantity | NUMERIC | NOT NULL | 取れる数 |
 | needs_review | BOOLEAN | NOT NULL, DEFAULT false | 要確認フラグ |
+| manual_price | BOOLEAN | NOT NULL, DEFAULT false | 手動単価フラグ |
+| manual_unit_cost | NUMERIC | | 手動で設定した単位原価 |
 | business_type_id | INTEGER | FK → business_types(business_type_id) | 業態への参照 |
 | created_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 作成日時 |
 | updated_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 更新日時 |
@@ -210,10 +213,12 @@
 
 **備考**:
 - 単位原価は表示時に計算（仕入れ単価 ÷ 取れる数）
-- アイテム : 仕入れ商品 = 1 : 1 の関係
+- アイテム : 仕入れ商品 = 1 : 1 の関係（手動単価の場合は紐付けなし）
 - genre_idはNULL許容（未分類の場合）
 - business_type_idはNULL許容（未分類の場合）
 - needs_review=true は「仮の数値で登録、後で確認が必要」を示す
+- manual_price=true の場合、product_codeはNULL、manual_unit_costに単位原価を設定
+- 手動単価アイテムは一覧で🔁マーク表示（編集ページのみ）
 
 ---
 
@@ -495,6 +500,33 @@
 - 将来的に他の設定も追加可能
 
 ---
+### ⑰ ai_support_sessions（AIサポートセッション）
+
+**概要**: AIサポート機能の作業状態を保存し、ページリロード後も続きから再開できるようにする
+
+| カラム名 | 型 | 制約 | 説明 |
+|---------|-----|------|------|
+| session_id | SERIAL | PK | 主キー（自動採番） |
+| business_type_id | INTEGER | FK → business_types(business_type_id) | 業態への参照 |
+| file_name | TEXT | | 元ファイル名 |
+| session_data | JSONB | NOT NULL | セッションの全データ |
+| recipe_count | INTEGER | DEFAULT 0 | 読み取ったレシピの総数 |
+| remaining_count | INTEGER | DEFAULT 0 | 未登録のレシピ数 |
+| current_step | INTEGER | DEFAULT 1 | 現在のステップ（1-7） |
+| created_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 作成日時 |
+| updated_at | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | 更新日時 |
+
+**RLSポリシー**: なし（フェーズ1は認証なし）
+
+**インデックス**: 
+- idx_ai_support_sessions_business_type (business_type_id)
+
+**備考**:
+- 業態ごとに直近10件まで保存
+- 11件目作成時に最も古いセッションを自動削除
+- session_dataにはextractedRecipes, ingredientNames, linkedIngredients, duplicateMap, formData等をJSON形式で保存
+- ページリロード後も続きから再開可能
+---
 
 ## 🔗 リレーション
 
@@ -521,6 +553,7 @@
 | item_genres | business_type_id | business_types | business_type_id | SET NULL |
 | preparation_sections | business_type_id | business_types | business_type_id | SET NULL |
 | dish_sections | business_type_id | business_types | business_type_id | SET NULL |
+| ai_support_sessions | business_type_id | business_types | business_type_id | CASCADE |
 
 ### リレーション図
 
@@ -589,6 +622,8 @@ settings (システム設定)
 | 2025-12-28 | supplier_business_typesテーブル追加 | 取引先の非表示フラグを業態ごとに管理 |
 | 2025-12-28 | productsテーブルからis_active列を削除 | 中間テーブルに移行 |
 | 2025-12-28 | suppliersテーブルからis_hidden列を削除 | 中間テーブルに移行 |
+| 2026-01-03 | ai_support_sessionsテーブル追加 | AIサポートのセッション保存・復元機能（F023） |
+| 2026-01-03 | itemsテーブルにmanual_price, manual_unit_costカラム追加 | 仕入れ商品なしアイテム対応（F026） |
 
 ---
 

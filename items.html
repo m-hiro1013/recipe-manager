@@ -137,6 +137,14 @@
                         <span class="menu-text whitespace-nowrap overflow-hidden">レシピブック</span>
                     </a>
                 </li>
+                <li>
+                    <a href="/ai-support.html"
+                        class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                        title="AIサポート">
+                        <span class="flex-shrink-0">🤖</span>
+                        <span class="menu-text whitespace-nowrap overflow-hidden">AIサポート</span>
+                    </a>
+                </li>
                 <li class="pt-4 border-t border-gray-700 mt-4">
                     <a href="/master.html"
                         class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors"
@@ -224,34 +232,20 @@
             </div>
             <div class="p-6 overflow-y-auto max-h-[70vh]">
 
-                <!-- 仕入れ商品選択 -->
-                <div class="mb-6">
-                    <label class="block text-sm font-bold text-gray-700 mb-2">
-                        仕入れ商品を選択 <span class="text-red-500">*</span>
-                    </label>
-                    <button id="openProductSelectModal" type="button"
-                        class="w-full p-3 border-2 border-gray-200 rounded-lg text-left hover:border-blue-400 transition-colors flex justify-between items-center">
-                        <span id="selectedProductText" class="text-gray-400">クリックして商品を選択...</span>
-                        <span class="text-gray-400">▼</span>
+                <!-- モード切り替えタブ -->
+                <div class="flex gap-2 mb-6">
+                    <button type="button" id="tabProductMode"
+                        class="flex-1 px-4 py-3 rounded-lg font-bold transition-colors bg-blue-600 text-white">
+                        📦 仕入れ商品から
                     </button>
-                    <input type="hidden" id="selectedProductCode" />
-                    <input type="hidden" id="selectedProductPrice" />
-                    <input type="hidden" id="selectedProductIsActive" />
-                    <p id="productInfo" class="mt-2 text-sm text-gray-500"></p>
+                    <button type="button" id="tabManualMode"
+                        class="flex-1 px-4 py-3 rounded-lg font-bold transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300">
+                        🔁 手動で入力
+                    </button>
                 </div>
-                <!-- ジャンル選択 -->
-                <div class="mb-6">
-                    <label class="block text-sm font-bold text-gray-700 mb-2">
-                        ジャンル <span class="text-red-500">*</span>
-                    </label>
-                    <select id="itemGenre"
-                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500">
-                        <option value="">選択してください</option>
-                        <!-- JSで動的に生成 -->
-                    </select>
-                </div>
+
                 <!-- アイテム名 -->
-                <div class="mb-6">
+                <div class="mb-4">
                     <label class="block text-sm font-bold text-gray-700 mb-2">
                         アイテム名 <span class="text-red-500">*</span>
                     </label>
@@ -260,7 +254,7 @@
                 </div>
 
                 <!-- 読み仮名 -->
-                <div class="mb-6">
+                <div class="mb-4">
                     <label class="block text-sm font-bold text-gray-700 mb-2">
                         読み仮名 <span class="text-red-500">*</span>
                         <span class="help-tooltip ml-1">
@@ -270,7 +264,18 @@
                     </label>
                     <input type="text" id="itemKana" placeholder="例：トリモモニク"
                         class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
-                    <p class="mt-1 text-sm text-gray-500">ひらがな・カタカナで入力（自動で半角カタカナに変換）</p>
+                    <p class="mt-1 text-sm text-gray-500">ひらがな・カタカナで入力（自動で全角カタカナに変換）</p>
+                </div>
+
+                <!-- ジャンル選択 -->
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        ジャンル <span class="text-red-500">*</span>
+                    </label>
+                    <select id="itemGenre"
+                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500">
+                        <option value="">選択してください</option>
+                    </select>
                 </div>
 
                 <!-- 使用単位 -->
@@ -286,33 +291,103 @@
                         class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
                 </div>
 
-                <!-- 取れる数 -->
-                <div class="mb-6">
-                    <label class="block text-sm font-bold text-gray-700 mb-2">
-                        取れる数 <span class="text-red-500">*</span>
-                        <span class="help-tooltip ml-1">
-                            <span class="text-gray-400 text-xs">❓</span>
-                            <span class="tooltip-text tooltip-wide">1発注から何単位取れるか（例：2kg購入→500gずつ使うなら「4」）</span>
-                        </span>
-                    </label>
-                    <input type="number" id="yieldQuantity" placeholder="例：4" step="0.01" min="0.01"
-                        class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                <!-- ===== 仕入れ商品モード ===== -->
+                <div id="productModeSection">
+                    <div class="border-t pt-6 mb-4">
+                        <h4 class="text-sm font-bold text-gray-700 mb-4">📦 仕入れ商品から作成</h4>
+                    </div>
+
+                    <!-- 仕入れ商品選択 -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">
+                            仕入れ商品を選択 <span class="text-red-500">*</span>
+                        </label>
+                        <button id="openProductSelectModal" type="button"
+                            class="w-full p-3 border-2 border-gray-200 rounded-lg text-left hover:border-blue-400 transition-colors flex justify-between items-center">
+                            <span id="selectedProductText" class="text-gray-400">クリックして商品を選択...</span>
+                            <span class="text-gray-400">▼</span>
+                        </button>
+                        <input type="hidden" id="selectedProductCode" />
+                        <input type="hidden" id="selectedProductPrice" />
+                        <input type="hidden" id="selectedProductIsActive" />
+                        <p id="productInfo" class="mt-2 text-sm text-gray-500"></p>
+                    </div>
+
+                    <!-- 取れる数 -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">
+                            取れる数 <span class="text-red-500">*</span>
+                            <span class="help-tooltip ml-1">
+                                <span class="text-gray-400 text-xs">❓</span>
+                                <span class="tooltip-text tooltip-wide">1発注から何単位取れるか（例：2kg購入→500gずつ使うなら「4」）</span>
+                            </span>
+                        </label>
+                        <input type="number" id="yieldQuantity" placeholder="例：4" step="0.01" min="0.01"
+                            class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                    </div>
+
+                    <!-- 単位原価プレビュー -->
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <p class="text-sm text-gray-600 mb-1">
+                            単位原価（自動計算）
+                            <span class="help-tooltip ml-1">
+                                <span class="text-gray-400 text-xs">❓</span>
+                                <span class="tooltip-text">仕入れ単価 ÷ 取れる数</span>
+                            </span>
+                        </p>
+                        <p id="unitCostPreview" class="text-2xl font-bold text-blue-600">---</p>
+                        <p id="unitCostFormula" class="text-sm text-gray-500 mt-1"></p>
+                    </div>
                 </div>
 
-                <!-- 単位原価プレビュー -->
-                <div class="bg-blue-50 rounded-lg p-4 mb-6">
-                    <p class="text-sm text-gray-600 mb-1">
-                        単位原価（自動計算）
-                        <span class="help-tooltip ml-1">
-                            <span class="text-gray-400 text-xs">❓</span>
-                            <span class="tooltip-text">仕入れ単価 ÷ 取れる数</span>
-                        </span>
-                    </p>
-                    <p id="unitCostPreview" class="text-2xl font-bold text-blue-600">---</p>
-                    <p id="unitCostFormula" class="text-sm text-gray-500 mt-1"></p>
+                <!-- ===== 手動入力モード ===== -->
+                <div id="manualModeSection" class="hidden">
+                    <div class="border-t pt-6 mb-4">
+                        <h4 class="text-sm font-bold text-gray-700 mb-2">🔁 手動で入力</h4>
+                        <p class="text-xs text-gray-500">仕入れ商品に紐付かないアイテムを作成します。単価は手動で更新が必要です。</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-2">
+                                総量 <span class="text-red-500">*</span>
+                            </label>
+                            <input type="number" id="manualTotalQuantity" step="0.01" min="0"
+                                class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                                placeholder="例：1000" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-2">
+                                総量の単位 <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" id="manualTotalUnit" readonly
+                                class="w-full p-3 border-2 border-gray-100 rounded-lg bg-gray-50 text-gray-500"
+                                placeholder="使用単位と同じ" />
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">
+                            仕入れ金額
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <span class="text-gray-500">¥</span>
+                            <input type="number" id="manualTotalPrice" step="1" min="0"
+                                class="flex-1 p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                                placeholder="例：500（0円も可）" />
+                        </div>
+                    </div>
+
+                    <!-- 単位原価プレビュー -->
+                    <div class="bg-yellow-50 rounded-lg p-4">
+                        <p class="text-sm text-gray-600 mb-1">単位原価（自動計算）</p>
+                        <p id="manualUnitCostPreview" class="text-2xl font-bold text-yellow-700">---</p>
+                        <p id="manualUnitCostFormula" class="text-sm text-gray-500 mt-1"></p>
+                    </div>
                 </div>
+
                 <!-- 要確認フラグ -->
-                <div class="mb-6">
+                <div class="mt-6 pt-6 border-t">
                     <label class="flex items-center gap-3 cursor-pointer">
                         <input type="checkbox" id="itemNeedsReview"
                             class="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500" />
@@ -320,8 +395,9 @@
                     </label>
                     <p class="mt-1 text-sm text-gray-500 ml-8">後で正しい数値を確認する場合はチェック</p>
                 </div>
+
                 <!-- ボタン -->
-                <div class="flex gap-4">
+                <div class="flex gap-4 mt-6">
                     <button id="cancelCreate"
                         class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-bold text-gray-700 hover:bg-gray-50 transition-colors">
                         キャンセル
@@ -395,8 +471,52 @@
                 <input type="hidden" id="editItemId" />
                 <input type="hidden" id="editProductPrice" />
 
-                <!-- 仕入れ商品 -->
-                <div class="mb-6">
+                <!-- 手動単価表示（手動単価アイテムの場合のみ表示） -->
+                <div id="editManualPriceInfo" class="hidden mb-6">
+                    <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p class="text-sm text-yellow-800 mb-3">🔁 手動単価アイテム</p>
+
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">
+                                    総量 <span class="text-red-500">*</span>
+                                </label>
+                                <input type="number" id="editManualTotalQuantity" step="0.01" min="0"
+                                    class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                                    placeholder="例：1000" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">
+                                    単位 <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" id="editManualTotalUnit"
+                                    class="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                                    placeholder="例：g" />
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-bold text-gray-700 mb-2">
+                                仕入れ金額
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <span class="text-gray-500">¥</span>
+                                <input type="number" id="editManualTotalPrice" step="1" min="0"
+                                    class="flex-1 p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                                    placeholder="例：500（0円も可）" />
+                            </div>
+                        </div>
+
+                        <div class="bg-yellow-100 rounded-lg p-4">
+                            <p class="text-sm text-gray-600 mb-1">単位原価（自動計算）</p>
+                            <p id="editManualUnitCostPreview" class="text-2xl font-bold text-yellow-700">---</p>
+                            <p id="editManualUnitCostFormula" class="text-sm text-gray-500 mt-1"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 仕入れ商品（通常アイテムの場合のみ表示） -->
+                <div id="editProductSelectSection" class="mb-6">
                     <label class="block text-sm font-bold text-gray-700 mb-2">仕入れ商品</label>
                     <div class="flex gap-2">
                         <p id="editProductInfo" class="flex-1 p-3 bg-gray-100 rounded-lg text-gray-700"></p>
@@ -406,7 +526,9 @@
                         </button>
                     </div>
                     <input type="hidden" id="editProductCode" />
+                    <input type="hidden" id="editManualPriceMode" />
                 </div>
+
                 <!-- ジャンル選択 -->
                 <div class="mb-6">
                     <label class="block text-sm font-bold text-gray-700 mb-2">
@@ -455,7 +577,7 @@
                 </div>
 
                 <!-- 取れる数 -->
-                <div class="mb-6">
+                <div id="editYieldQuantitySection" class="mb-6">
                     <label class="block text-sm font-bold text-gray-700 mb-2">
                         取れる数 <span class="text-red-500">*</span>
                         <span class="help-tooltip ml-1">
@@ -468,7 +590,7 @@
                 </div>
 
                 <!-- 単位原価プレビュー -->
-                <div class="bg-blue-50 rounded-lg p-4 mb-6">
+                <div id="editUnitCostPreviewSection" class="bg-blue-50 rounded-lg p-4 mb-6">
                     <p class="text-sm text-gray-600 mb-1">
                         単位原価（自動計算）
                         <span class="help-tooltip ml-1">
